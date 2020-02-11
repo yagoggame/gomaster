@@ -4,8 +4,6 @@
 
 **gomaster** provides implementation of internal mechanics of the Go game.
 
-**gomaster** provides go game service available through grpc
-
 ## Installation
 
 To install this package, you need to install Go and setup your Go workspace on your computer. The simplest way to install the library is to run:
@@ -17,7 +15,7 @@ With Go module support (Go 1.11+), simply import `github.com/yagoggame/gomaster`
 
 ## License
 
-The **Api** is part of **yagogame**.
+The **gomaster** is part of **yagogame**.
 
 yagogame is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
