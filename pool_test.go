@@ -48,7 +48,7 @@ func TestPoolFill(t *testing.T) {
 	}
 
 	pool := NewGamersPool()
-	if pool==nil {
+	if pool == nil {
 		t.Fatalf("failed on NewGamersPool: nil pool created")
 	}
 	defer pool.Release()
@@ -235,14 +235,14 @@ func TestPoolRelease(t *testing.T) {
 	c := make(chan interface{})
 	go func(c chan<- interface{}) {
 		pool.Release()
-		_, ok := <- pool
-		c<-ok
+		_, ok := <-pool
+		c <- ok
 		close(c)
 	}(c)
 
 	select {
-	case ok:= <-c:
-		if ok==true {
+	case ok := <-c:
+		if ok == true {
 			t.Fatalf("It was expected that pool.Release() will shut down GamersPool object as chanel, but it's still alive")
 		}
 	case <-time.After(dur):

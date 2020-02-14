@@ -32,12 +32,10 @@ import (
 // ChipColour - provide datatype of chip's colours
 type ChipColour int
 
+//Set of chip's colours
 const (
-	// Colour not assigned
 	NoColour ChipColour = 0
-	// Colour of black chip
 	Black = 1
-	// Colour of white chip
 	White = 2
 )
 
@@ -45,8 +43,10 @@ const (
 // Actions
 ///////////////////////////////////////////////////////
 
+// gameAction is a type with game action values
 type gameAction int
 
+// set of actions values of Game object
 const (
 	joinCMD        gameAction = iota //join This Game
 	endCMD                           //finish this game
@@ -61,18 +61,19 @@ const (
 	wTurnCMD  //wait for your turn
 )
 
-// TurnData - struct, using to put a gamer's turn data
+// TurnData is a struct, using to put a gamer's turn data
 type TurnData struct {
 	X, Y int
 }
 
-// TurnError - is a special kind of error
+// TurnError is a special kind of error to inform on wrong turn.
 type TurnError string
 
 func (te TurnError) Error() string {
 	return string(te)
 }
 
+// gameCommand is a type to hold a comand to a Game
 type gameCommand struct {
 	act   gameAction
 	gamer *Gamer
@@ -80,20 +81,20 @@ type gameCommand struct {
 	turn  *TurnData
 }
 
-// Game - datatype based on chanel, to provide a thread safe game entity.
+// Game is a datatype based on chanel, to provide a thread safe game entity.
 type Game chan *gameCommand
 
 ///////////////////////////////////////////////////////
 // Queries on actions
 ///////////////////////////////////////////////////////
 
-// End - releases game resources and close a Game object as chanel
+// End releases game resources and close a Game object as chanel
 // Use this function only to abort, if creation failed.
 // Normaly - Leave invocation for all users has the same consequences.
 // If the End() invoked after this - an error will be returned.
 func (g Game) End() (err error) {
 	// gamer leaving can close the Game object as chanel,
-	// it could cause a panic in other goroutines. process it
+	// it could cause a panic in other goroutines. process it.
 	defer recoverAsErr(&err)
 
 	c := make(chan interface{})
@@ -102,10 +103,10 @@ func (g Game) End() (err error) {
 	return nil
 }
 
-// Join - try to join gamer to this Game.
+// Join tries to join gamer to this Game.
 func (g Game) Join(gamer *Gamer) (err error) {
 	// gamer leaving can close the Game object as chanel,
-	// it could cause a panic in other goroutines. process it
+	// it could cause a panic in other goroutines. process it.
 	defer recoverAsErr(&err)
 
 	c := make(chan interface{})
@@ -117,10 +118,10 @@ func (g Game) Join(gamer *Gamer) (err error) {
 	return nil
 }
 
-// GamerState - returns a copy of Internal State of a gamer (to prevent a manual changing).
+// GamerState returns a copy of Internal State of a gamer (to prevent a manual changing).
 func (g Game) GamerState(gamer *Gamer) (state GamerState, err error) {
 	// gamer leaving can close the Game object as chanel,
-	// it could cause a panic in other goroutines. process it
+	// it could cause a panic in other goroutines. process it.
 	defer recoverAsErr(&err)
 
 	c := make(chan interface{})
@@ -138,11 +139,11 @@ func (g Game) GamerState(gamer *Gamer) (state GamerState, err error) {
 
 }
 
-// WaitBegin - waits for game begin.
+// WaitBegin waits for game begin.
 // If gamer started this game - awaiting another person.
 func (g Game) WaitBegin(ctx context.Context, gamer *Gamer) (err error) {
 	// gamer leaving can close the Game object as chanel,
-	// it could cause a panic in other goroutines. process it
+	// it could cause a panic in other goroutines. process it.
 	defer recoverAsErr(&err)
 
 	//buffered because when killed by cancelation - internal mechanism can block other invocation on attemption to write to this chanel later
@@ -159,11 +160,11 @@ func (g Game) WaitBegin(ctx context.Context, gamer *Gamer) (err error) {
 	return nil
 }
 
-// IsGameBegun - return true, if all gamers joined to a game.
+// IsGameBegun return true, if all gamers joined to a game.
 // Function provided to avoid of sleep on WaitBegin call.
 func (g Game) IsGameBegun(gamer *Gamer) (igb bool, err error) {
 	// gamer leaving can close the Game object as chanel,
-	// it could cause a panic in other goroutines. process it
+	// it could cause a panic in other goroutines. process it.
 	defer recoverAsErr(&err)
 
 	c := make(chan interface{}, 1)
@@ -180,10 +181,10 @@ func (g Game) IsGameBegun(gamer *Gamer) (igb bool, err error) {
 	return false, fmt.Errorf("unknown type of value returned: %T: %v", rez, rez)
 }
 
-// WaitTurn - waits for your turn.
+// WaitTurn waits for your turn.
 func (g Game) WaitTurn(ctx context.Context, gamer *Gamer) (err error) {
 	// gamer leaving can close the Game object as chanel,
-	// it could cause a panic in other goroutines. process it
+	// it could cause a panic in other goroutines. process it.
 	defer recoverAsErr(&err)
 
 	//buffered because when killed by cancelation - internal mechanism can block other invocation on attemption to write to this chanel later
@@ -200,11 +201,11 @@ func (g Game) WaitTurn(ctx context.Context, gamer *Gamer) (err error) {
 	return nil
 }
 
-// IsMyTurn - return true, if now is a gamer's turn else - false.
+// IsMyTurn returns true, if now is a gamer's turn else - false.
 // Function provided to avoid of sleep on WaitTurn call.
 func (g Game) IsMyTurn(gamer *Gamer) (imt bool, err error) {
 	// gamer leaving can close the Game object as chanel,
-	// it could cause a panic in other goroutines. process it
+	// it could cause a panic in other goroutines. process it.
 	defer recoverAsErr(&err)
 
 	c := make(chan interface{}, 1)
@@ -221,10 +222,10 @@ func (g Game) IsMyTurn(gamer *Gamer) (imt bool, err error) {
 	return false, fmt.Errorf("unknown type of value returned: %T: %v", rez, rez)
 }
 
-// MakeTurn - tries to make a turn.
+// MakeTurn tries to make a turn.
 func (g Game) MakeTurn(gamer *Gamer, turn *TurnData) (err error) {
 	// gamer leaving can close the Game object as chanel,
-	// it could cause a panic in other goroutines. process it
+	// it could cause a panic in other goroutines. process it.
 	defer recoverAsErr(&err)
 
 	c := make(chan interface{})
@@ -237,11 +238,11 @@ func (g Game) MakeTurn(gamer *Gamer, turn *TurnData) (err error) {
 	return nil
 }
 
-// Leave - leave a game.
+// Leave leave a game.
 // No methods of this Game object should be invoked by this gamer after this call - it will return an error.
 func (g Game) Leave(gamer *Gamer) (err error) {
 	// gamer leaving can close the Game object as chanel,
-	// it could cause a panic in other goroutines. process it
+	// it could cause a panic in other goroutines. process it.
 	defer recoverAsErr(&err)
 
 	c := make(chan interface{})
@@ -280,7 +281,7 @@ func joinThisGame(gamers *map[*Gamer]*GamerState, gamer *Gamer, rezChan chan<- i
 		return
 	}
 
-	// if game already collapsed by some reasone - there is no sense to wait
+	// if game already collapsed by some reasone - there is no sense to wait.
 	if gameOver == true {
 		rezChan <- fmt.Errorf("Game Over")
 		return
@@ -291,8 +292,7 @@ func joinThisGame(gamers *map[*Gamer]*GamerState, gamer *Gamer, rezChan chan<- i
 		clr = ChipColour(3 - int((*gamers)[gamer].Colour))
 	}
 
-	// assign a colour and give a chips to this player
-
+	// assign a colour and give a chips to this player.
 	(*gamers)[gamer] = &GamerState{
 		Colour: clr,
 	}
@@ -301,19 +301,19 @@ func joinThisGame(gamers *map[*Gamer]*GamerState, gamer *Gamer, rezChan chan<- i
 func gamerState(gamers map[*Gamer]*GamerState, gamer *Gamer, rezChan chan<- interface{}) {
 	defer close(rezChan)
 
-	// this action may be called only for joined players
+	// this action may be called only for joined players.
 	gs, ok := gamers[gamer]
 	if ok == false {
 		rezChan <- fmt.Errorf("not joined gamer %s tries to get his state in the game", gamer)
 		return
 	}
 
-	//put chanel to report on estimation of game begin condition in safe place
+	//put chanel to report on estimation of game begin condition in safe place.
 	rezChan <- *gs
 }
 
 func waitBegin(gamers map[*Gamer]*GamerState, gamer *Gamer, rezChan chan<- interface{}, gameOver bool) {
-	// this action may be called only for joined players
+	// this action may be called only for joined players.
 	gs, ok := gamers[gamer]
 	if ok == false {
 		rezChan <- fmt.Errorf("not joined gamer %s tries to await of game begin", gamer)
@@ -321,17 +321,17 @@ func waitBegin(gamers map[*Gamer]*GamerState, gamer *Gamer, rezChan chan<- inter
 		return
 	}
 
-	// if game already collapsed by some reasone - there is no sense to wait
+	// if game already collapsed by some reasone - there is no sense to wait.
 	if gameOver == true {
 		rezChan <- fmt.Errorf("Game Over")
 		close(rezChan)
 		return
 	}
 
-	//put chanel to report on estimation of game begin condition in safe place
+	//put chanel to report on estimation of game begin condition in safe place.
 	gs.beMSGChan = rezChan
 
-	//if number of players enough to begin a game - report to all players
+	//if number of players enough to begin a game - report to all players.
 	if len(gamers) == 2 {
 		for _, gs := range gamers {
 			reportOnChan(&gs.beMSGChan, nil)
@@ -348,7 +348,7 @@ func isGameBegun(gamers map[*Gamer]*GamerState, gamer *Gamer, currentTurn int, r
 		return
 	}
 
-	// if game already collapsed by some reasone - there is no sense to wait
+	// if game already collapsed by some reasone - there is no sense to wait.
 	if gameOver == true {
 		rezChan <- fmt.Errorf("Game Over")
 		return
@@ -359,7 +359,7 @@ func isGameBegun(gamers map[*Gamer]*GamerState, gamer *Gamer, currentTurn int, r
 }
 
 func waitTurn(gamers map[*Gamer]*GamerState, gamer *Gamer, currentTurn int, rezChan chan<- interface{}, gameOver bool) {
-	// this action may be called only for joined players
+	// this action may be called only for joined players.
 	gs, ok := gamers[gamer]
 	if ok == false {
 		rezChan <- fmt.Errorf("not joined gamer %s tries to await of his turn", gamer)
@@ -367,7 +367,7 @@ func waitTurn(gamers map[*Gamer]*GamerState, gamer *Gamer, currentTurn int, rezC
 		return
 	}
 
-	// if game already collapsed by some reasone - there is no sense to wait
+	// if game already collapsed by some reasone - there is no sense to wait.
 	if gameOver == true {
 		rezChan <- fmt.Errorf("Game Over")
 		close(rezChan)
@@ -380,7 +380,7 @@ func waitTurn(gamers map[*Gamer]*GamerState, gamer *Gamer, currentTurn int, rezC
 		return
 	}
 
-	//put chanel to report on estimation of player's turn begin condition in safe place
+	//put chanel to report on estimation of player's turn begin condition in safe place.
 	gs.turnMSGChan = rezChan
 }
 
@@ -397,13 +397,13 @@ func isMyTurn(gamers map[*Gamer]*GamerState, gamer *Gamer, currentTurn int, rezC
 		return
 	}
 
-	// if game already collapsed by some reasone - there is no sense to wait
+	// if game already collapsed by some reasone - there is no sense to wait.
 	if gameOver == true {
 		rezChan <- fmt.Errorf("Game Over")
 		return
 	}
 
-	// If a player's turn has already come - report
+	// If a player's turn has already come - report.
 	rezChan <- isMyTurnCalc(currentTurn, gs.Colour)
 }
 
@@ -418,14 +418,14 @@ func performTurn(turn *TurnData) error {
 func makeTurn(gamers map[*Gamer]*GamerState, gamer *Gamer, turn *TurnData, currentTurn int, rezChan chan<- interface{}, gameOver bool) int {
 	defer close(rezChan)
 
-	// this action may be called only for joined players
+	// this action may be called only for joined players.
 	gs, ok := gamers[gamer]
 	if ok == false {
 		rezChan <- fmt.Errorf("not joined gamer %s tries to make a turn", gamer)
 		return 0
 	}
 
-	// if game already collapsed by some reasone - there is no sense to wait
+	// if game already collapsed by some reasone - there is no sense to wait.
 	if gameOver == true {
 		rezChan <- fmt.Errorf("Game Over")
 		return 0
@@ -437,16 +437,16 @@ func makeTurn(gamers map[*Gamer]*GamerState, gamer *Gamer, turn *TurnData, curre
 		return 0
 	}
 
-	//perform turn and check, is it correct
+	//perform turn and check, is it correct.
 	if err := performTurn(turn); err != nil {
 		rezChan <- TurnError(fmt.Sprintf("wrong turn: %s", err))
 		return 0
 	}
 
-	//report player that turn is changed, if they are awaiting
+	//report player that turn is changed, if they are awaiting.
 	for _, gs := range gamers {
 		if ((currentTurn+1)%2 == 0 && gs.Colour == Black) || ((currentTurn+1)%2 == 1 && gs.Colour == White) {
-			// if there is old call's channel - report on it too
+			// if there is old call's channel - report on it too.
 			reportOnChan(&gs.turnMSGChan, nil)
 		}
 	}
@@ -457,14 +457,14 @@ func makeTurn(gamers map[*Gamer]*GamerState, gamer *Gamer, turn *TurnData, curre
 func leaveGame(gamers map[*Gamer]*GamerState, gamer *Gamer, rezChan chan<- interface{}) bool {
 	defer close(rezChan)
 
-	// this action may be called only for joined players
+	// this action may be called only for joined players.
 	_, ok := gamers[gamer]
 	if ok == false {
 		rezChan <- fmt.Errorf("not joined gamer %s tries to leave the game", gamer)
 		return false
 	}
 
-	// report to other player's, if they are awaiting somesthing, that other player left the game
+	// report to other player's, if they are awaiting somesthing, that other player left the game.
 	for _, gs := range gamers {
 		reportOnChan(&gs.beMSGChan, fmt.Errorf("other player left the game"))
 		reportOnChan(&gs.turnMSGChan, fmt.Errorf("other player left the game"))
@@ -484,7 +484,7 @@ func reportOnChan(rezChan *chan<- interface{}, val interface{}) {
 	}
 }
 
-// GamerState struct - provides game internal data for one gamer
+// GamerState struct provides game internal data for one gamer.
 type GamerState struct {
 	// colour of chip of this gamer
 	Colour ChipColour
@@ -494,7 +494,7 @@ type GamerState struct {
 	turnMSGChan chan<- interface{}
 }
 
-// run - Processes commads for thread safe operations on Game
+// run processes commads for thread safe operations on Game.
 func (g Game) run() {
 	rand.Seed(time.Now().UnixNano())
 
@@ -538,8 +538,8 @@ func (g Game) run() {
 	return
 }
 
-// NewGame - Create the Game
-// Game mast be finished  by calling of End() method
+// NewGame creates the Game.
+// Game mast be finished  by calling of End() method.
 func NewGame() Game {
 	g := make(Game)
 	g.run()

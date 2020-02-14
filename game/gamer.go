@@ -16,21 +16,16 @@
 
 package game
 
-import (
-	"fmt"
-)
+import "fmt"
 
 // Gamer - struct assigned to each gamer
 type Gamer struct {
-	// Name - the name of a player. may be the same for different player
-	Name   string
-	// Id - unique id of a gamer
-	Id     int
-	// InPlay - gamer in pool may be vacant (InPlay is nil) or joined to this game
-	InGame Game
+	Name   string//the name of a player. may be the same for different player
+	Id     int//unique id of a gamer
+	InGame Game//gamer in pool may be vacant (InPlay is nil) or joined to this game
 }
 
-// String - method to satisfy Stringer interface
+// String provides compatibility with Stringer interface.
 func (g *Gamer) String() string {
 	return fmt.Sprintf("[ id: %d, name: %q, isInPlay: %v ]", g.Id, g.Name, g.InGame)
 }

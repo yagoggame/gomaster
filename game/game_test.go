@@ -24,7 +24,7 @@ import (
 	"time"
 )
 
-//TestCreateJoinEnd - performs basic creation, fill and end of game
+//TestCreateJoinEnd performs test of basic creation, fill and end of game.
 func TestCreateJoinEnd(t *testing.T) {
 	type testCase struct {
 		caseName string
@@ -57,7 +57,7 @@ func TestCreateJoinEnd(t *testing.T) {
 		})
 	}
 
-	//End function should be the pretty fast action with closing of game object
+	//End function should be the pretty fast action with closing of game object.
 	dur := time.Duration(10) * time.Second
 	c := make(chan interface{})
 	go func(c chan<- interface{}) {
@@ -77,7 +77,7 @@ func TestCreateJoinEnd(t *testing.T) {
 	}
 }
 
-// TestGamerState - performs request of gamer's state
+// TestGamerState performs request of gamer's state.
 func TestGamerState(t *testing.T) {
 	gamers := []*Gamer{
 		&Gamer{Name: "Joe", Id: 1},
@@ -94,14 +94,14 @@ func TestGamerState(t *testing.T) {
 		g.InGame = game
 	}
 
-	//get state of foreign gamer should fail
+	//get state of foreign gamer should fail.
 	fg := &Gamer{Name: "Dick", Id: 3}
 	req := fmt.Sprintf("not joined gamer %s tries to get his state in the game", fg)
 	if gs, err := game.GamerState(fg); err == nil || strings.Compare(err.Error(), req) != 0 || gs.Colour != NoColour {
 		t.Errorf("supposed %q error and GamerState.Colour==NoColour, got: err: %v, gs: %v", req, err, gs)
 	}
 
-	//joined gamers shoul succeed
+	//joined gamers shoul succeed.
 	usedColours := make(map[ChipColour]bool)
 	for _, g := range gamers {
 		gs, err := game.GamerState(g)
@@ -119,7 +119,7 @@ func TestGamerState(t *testing.T) {
 	}
 }
 
-//TestIsGameBegin - verify is IsGameBegin working fine
+//TestIsGameBegin verifies is IsGameBegin working fine.
 func TestIsGameBegin(t *testing.T) {
 
 	gamers := []*Gamer{
@@ -153,17 +153,8 @@ func TestIsGameBegin(t *testing.T) {
 	}
 }
 
-// waitGameRoutine - Wait of game begin for specified gamer
-// report status
-func waitGameRoutine(ctx context.Context, game Game, gamer *Gamer, ch chan<- error) {
-	defer close(ch)
-	err := game.WaitBegin(ctx, gamer)
-	if err != nil {
-		ch <- err
-	}
-}
-
-// TestGamerBeginSuccess - test: game with all gamers on the board should finish awaiting rapidly
+// TestGamerBeginSuccess tests game with all gamers on the board. 
+// It should finish awaiting rapidly
 func TestGamerBeginSuccess(t *testing.T) {
 	gamers := []*Gamer{
 		&Gamer{Name: "Joe", Id: 1},
@@ -179,7 +170,7 @@ func TestGamerBeginSuccess(t *testing.T) {
 
 	chans := make([]chan error, len(gamers))
 
-	// wait game shoul finish awaiting rapidly, when all players are joined
+	// wait game shoul finish awaiting rapidly, when all players are joined.
 	for i, g := range gamers {
 		if err := game.Join(g); err != nil {
 			t.Fatalf("failed to join gamer %s to a game %v: %q", g, game, err)
@@ -214,7 +205,8 @@ func TestGamerBeginSuccess(t *testing.T) {
 	}
 }
 
-// TestGamerBeginFailure - test: game with missing gamer should hang untill second player join and return error on cancellation
+// TestGamerBeginFailure tests game with missing gamer. 
+// It should hang untill second player join and return error on cancellation
 func TestGamerBeginFailure(t *testing.T) {
 	gamer := &Gamer{Name: "Joe", Id: 1}
 
@@ -246,7 +238,8 @@ func TestGamerBeginFailure(t *testing.T) {
 	}
 }
 
-// TestGamerBeginForeign - test: not joined gamer should fail rapidly on game begin awaiting
+// TestGamerBeginForeign checks that not joined gamer 
+// fails rapidly on game begin awaiting
 func TestGamerBeginForeign(t *testing.T) {
 	gamer := &Gamer{Name: "Joe", Id: 1}
 
@@ -276,5 +269,14 @@ func TestGamerBeginForeign(t *testing.T) {
 		}
 	case <-time.After(2 * dur):
 		t.Fatalf("cancellation failed")
+	}
+}
+
+// waitGameRoutine waits of game the begin for specified gamer.
+func waitGameRoutine(ctx context.Context, game Game, gamer *Gamer, ch chan<- error) {
+	defer close(ch)
+	err := game.WaitBegin(ctx, gamer)
+	if err != nil {
+		ch <- err
 	}
 }

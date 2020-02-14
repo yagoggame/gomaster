@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with yagogame.  If not, see <https://www.gnu.org/licenses/>.
 
-// gomaster - provides thread safe pool of gamers
+// gomaster - provides thread safe pool of gamers.
 package gomaster
 
 import (
@@ -27,8 +27,10 @@ import (
 // Actions
 ///////////////////////////////////////////////////////
 
+// action is a type with actions values.
 type action int
 
+// set of actions values of GamersPool object.
 const (
 	add action = iota // add gamer to pool
 	rem               // remove gamer from pool
@@ -40,6 +42,7 @@ const (
 	getG     // get gamer's game
 )
 
+// command is a type to hold a comand to a GamersPool.
 type command struct {
 	act   action
 	gamer *game.Gamer
@@ -47,15 +50,14 @@ type command struct {
 	rez   chan<- interface{}
 }
 
-// GamersPool - datatype based on chanel, to provide a thread safe pool of gamers.
+// GamersPool is a datatype based on chanel, to provide a thread safe pool of gamers.
 type GamersPool chan *command
 
 ///////////////////////////////////////////////////////
 // Queries on actions
 ///////////////////////////////////////////////////////
 
-// AddGamer - if the gamer with gamer's id not in pool - add it to the pool,
-// else - return error.
+// AddGamer adds a gamer to the pool if he's not already there.
 func (gp GamersPool) AddGamer(gamer *game.Gamer) error {
 	if gamer == nil {
 		return fmt.Errorf("unable to Add nil gamer")
@@ -69,8 +71,7 @@ func (gp GamersPool) AddGamer(gamer *game.Gamer) error {
 	return nil
 }
 
-// RmGamer - if gamer with gamer's id not in pool - return error to inform,
-// else - remove gamer.
+// RmGamer removes a gamer from the pool if he's there.
 func (gp GamersPool) RmGamer(id int) (gamer *game.Gamer, err error) {
 	c := make(chan interface{})
 	gp <- &command{act: rem, id: id, rez: c}
@@ -82,7 +83,7 @@ func (gp GamersPool) RmGamer(id int) (gamer *game.Gamer, err error) {
 	return gamer, nil
 }
 
-// ListGamers - returns the list of gamers in the pool.
+// ListGamers returns the list of gamers in the pool.
 func (gp GamersPool) ListGamers() []*game.Gamer {
 	c := make(chan interface{})
 	gp <- &command{act: lst, rez: c}
@@ -91,7 +92,7 @@ func (gp GamersPool) ListGamers() []*game.Gamer {
 	return rez.([]*game.Gamer)
 }
 
-// JoinGame - join gamer to some another gamer's game, or start it's own.
+// JoinGame joins a gamer to some another gamer's game, or start it's own.
 func (gp GamersPool) JoinGame(id int) error {
 	c := make(chan interface{})
 	gp <- &command{act: joinG, id: id, rez: c}
@@ -102,8 +103,8 @@ func (gp GamersPool) JoinGame(id int) error {
 	return nil
 }
 
-// ReleaseGamer - releases the gamer's game.
-func (gp GamersPool) ReleaseGame(id int) error{
+// ReleaseGamer releases the gamer's game.
+func (gp GamersPool) ReleaseGame(id int) error {
 	c := make(chan interface{})
 	gp <- &command{act: releaseG, id: id, rez: c}
 
@@ -113,7 +114,7 @@ func (gp GamersPool) ReleaseGame(id int) error{
 	return nil
 }
 
-// GetGamer - Gets gamer by id.
+// GetGamer gets gamer by id.
 func (gp GamersPool) GetGamer(id int) (*game.Gamer, error) {
 	c := make(chan interface{})
 	gp <- &command{act: getG, id: id, rez: c}
@@ -127,7 +128,7 @@ func (gp GamersPool) GetGamer(id int) (*game.Gamer, error) {
 	return nil, fmt.Errorf("wrong result type: %v", rez)
 }
 
-// Release - releases the pool.
+// Release releases the pool.
 func (gp GamersPool) Release() {
 	c := make(chan interface{})
 	gp <- &command{act: rel, rez: c}
@@ -175,7 +176,7 @@ func getGamer(gamers map[int]*game.Gamer, id int, rezChan chan<- interface{}) {
 
 func joinGame(gamers map[int]*game.Gamer, id int, rezChan chan<- interface{}) {
 	defer close(rezChan)
-	//  get a gamer by id. If there is no such gamer - it's  bad
+	// get a gamer by id. If there is no such gamer - it's  bad
 	gamer, ok := gamers[id]
 	if ok == false {
 		rezChan <- fmt.Errorf("can't join a game: can't find gamer with id %d", id)
@@ -187,13 +188,13 @@ func joinGame(gamers map[int]*game.Gamer, id int, rezChan chan<- interface{}) {
 		rezChan <- fmt.Errorf("can't join a game: gamer %v already joined to another game", gamer)
 		return
 	}
-	//  iterate over gamers
+	// iterate over gamers
 	for _, g := range gamers {
 		// playing with yourself is a sin, but we are need a gamer's object
 		if gamer.Id == g.Id {
 			continue
 		}
-		//try to join to a gamer's game
+		// try to join to a gamer's game
 		if g.InGame != nil {
 			// if succed - it's all, else - no matter: will try with other player or start his own game
 			if err := g.InGame.Join(gamer); err == nil {
@@ -224,7 +225,7 @@ func releaseGame(gamers map[int]*game.Gamer, id int, rezChan chan<- interface{})
 		rezChan <- fmt.Errorf("can't release a game: can't find gamer with id %d", id)
 		return
 	}
-	
+
 	// if gamer is playing yet - stop it
 	if gamer.InGame != nil {
 		// if gamer.InGame is active - try to release game, but in any case - mark gamer as vacant
@@ -233,7 +234,7 @@ func releaseGame(gamers map[int]*game.Gamer, id int, rezChan chan<- interface{})
 	}
 }
 
-// run - Processes commads for thread safe operations on pool.
+// run processes commads for thread safe operations on pool.
 func (gp GamersPool) run() {
 	gamers := make(map[int]*game.Gamer)
 	go func(gp GamersPool) {
@@ -263,7 +264,7 @@ func (gp GamersPool) run() {
 	return
 }
 
-// NewGamersPool - Create the pool of gamers.
+// NewGamersPool creates the pool of gamers.
 // Pool must be destroied after using by call of Release() method.
 func NewGamersPool() GamersPool {
 	gp := make(GamersPool)

@@ -24,22 +24,9 @@ import (
 	"time"
 )
 
-// waitGameTurnRoutine - run awaiting of the game, and of a turn for given gamer
-func waitGameTurnRoutine(ctx context.Context, game Game, gamer *Gamer, ch chan<- error) {
-	defer close(ch)
-	err := game.WaitBegin(ctx, gamer)
-	if err != nil {
-		ch <- err
-	}
-
-	err = game.WaitTurn(ctx, gamer)
-	if err != nil {
-		ch <- err
-	}
-}
-
-// TestGamerBeginTurnSuccess - test: game with all gamers on the board should finish awaiting of turn for the one player rapidly
-// and wait for a turn change for other
+// TestGamerBeginTurnSuccess checks the game with all gamers on the board.
+// It should finish awaiting of turn for the one player rapidly
+// and wait for a turn change for other.
 func TestGamerBeginTurnSuccess(t *testing.T) {
 	gamers := []*Gamer{
 		&Gamer{Name: "Joe", Id: 1},
@@ -95,16 +82,7 @@ func TestGamerBeginTurnSuccess(t *testing.T) {
 	}
 }
 
-// waitTurnRoutine - awaiting of gamer's turn
-func waitTurnRoutine(ctx context.Context, game Game, gamer *Gamer, ch chan<- error) {
-	defer close(ch)
-	err := game.WaitTurn(ctx, gamer)
-	if err != nil {
-		ch <- err
-	}
-}
-
-// TestGamerBeginTurnForeign - test: not joined gamer should fail rapidly on game begin awaiting
+// TestGamerBeginTurnForeign checks that not joined gamer should fail rapidly on game begin awaiting.
 func TestGamerBeginTurnForeign(t *testing.T) {
 	gamer := &Gamer{Name: "Joe", Id: 1}
 
@@ -117,7 +95,7 @@ func TestGamerBeginTurnForeign(t *testing.T) {
 
 	ch := make(chan error)
 
-	// wait game should finish awaiting rapidly, when all players are joined
+	// wait game should finish awaiting rapidly, when all players are joined.
 	if err := game.Join(gamer); err != nil {
 		t.Fatalf("failed to join gamer %s to a game %v: %q", gamer, game, err)
 	}
@@ -137,25 +115,9 @@ func TestGamerBeginTurnForeign(t *testing.T) {
 	}
 }
 
-// waitGameTurnMakeRoutine - runs a game and then a turn awaiting
-// after all - perform correct test, to provide turn change
-func waitGameTurnMakeRoutine(ctx context.Context, game Game, gamer *Gamer, ch chan<- error) {
-	defer close(ch)
-	err := game.WaitBegin(ctx, gamer)
-	if err != nil {
-		ch <- err
-	}
-
-	err = game.WaitTurn(ctx, gamer)
-	if err != nil {
-		ch <- err
-		return
-	}
-	game.MakeTurn(gamer, &TurnData{X: 1, Y: 1})
-}
-
-// TestGamerMakeTurnSuccess - test: game with all gamers on the board should finish awaiting of turn for the one player rapidly
-// and wait for a turn change for other with success
+// TestGamerMakeTurnSuccess checks that game with all gamers on the board 
+// should finish awaiting of turn for the one player rapidly
+// and wait for a turn change for other with success.
 func TestGamerMakeTurnSuccess(t *testing.T) {
 	gamers := []*Gamer{
 		&Gamer{Name: "Joe", Id: 1},
@@ -207,7 +169,7 @@ func TestGamerMakeTurnSuccess(t *testing.T) {
 	}
 }
 
-// TestIsMyTurn - test if is my turn function working fine
+// TestIsMyTurn checks is IsMyTurn function working fine.
 func TestIsMyTurn(t *testing.T) {
 	gamers := []*Gamer{
 		&Gamer{Name: "Joe", Id: 1},
@@ -222,7 +184,7 @@ func TestIsMyTurn(t *testing.T) {
 			t.Fatalf("failed to join gamer %s to a game %v: %q", g, game, err)
 		}
 		g.InGame = game
-		//both players are joined, so in same goroutine - no sence to await
+		//both players are joined, so in same goroutine - no sence to await.
 	}
 
 	type isTurn struct {
@@ -231,27 +193,27 @@ func TestIsMyTurn(t *testing.T) {
 	}
 	descs := make([]isTurn, len(gamers))
 
-	//excep for the foreign gamers
+	// excep for the foreign gamers.
 	fg := &Gamer{Name: "Sir", Id: 3}
 	req := fmt.Sprintf("not joined gamer %s tries to ask: is it his turn", fg)
 	if igt, err := game.IsMyTurn(fg); igt == true || err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
 		t.Errorf("succed to inspect foreign gamer's %s turn: %q", fg, err)
 	}
 
-	//is now gamer's turn should performe without errors
+	// is now gamer's turn should performe without errors.
 	for i, g := range gamers {
 		descs[i].igt, descs[i].err = game.IsMyTurn(gamers[i])
 		if descs[i].err != nil {
 			t.Fatalf("failed to inspect: is it gamer's %s turn: %s", g, descs[i].err)
 		}
 	}
-	//and it should be different
+	// and it should be different.
 	if descs[0].igt == descs[1].igt {
 		t.Fatalf("is turn state of joined gamers must differs but got: %t %t", descs[0].igt, descs[1].igt)
 	}
 }
 
-// TestMakeTurnFailures - different errors during turn
+// TestMakeTurnFailures checks different errors during turn.
 func TestMakeTurnFailures(t *testing.T) {
 	gamers := []*Gamer{
 		&Gamer{Name: "Joe", Id: 1},
@@ -266,24 +228,24 @@ func TestMakeTurnFailures(t *testing.T) {
 			t.Fatalf("failed to join gamer %s to a game %v: %q", g, game, err)
 		}
 		g.InGame = game
-		//both players are joined, so in same goroutine - no sence to await
+		// both players are joined, so in same goroutine - no sence to await.
 	}
 
-	//excep for the foreign gamers
+	// excep for the foreign gamers.
 	fg := &Gamer{Name: "Sir", Id: 3}
 	req := fmt.Sprintf("not joined gamer %s tries to make a turn", fg)
 	if err := game.MakeTurn(fg, &TurnData{X: 1, Y: 1}); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
 		t.Errorf("succed to inspect foreign gamer's %s turn: %q", fg, err)
 	}
 
-	//other tipical errors
+	// other tipical errors.
 	for _, g := range gamers {
 		igt, err := game.IsMyTurn(g)
 		if err != nil {
 			t.Fatalf("failed to IsMyTurn: %s", err)
 		}
 		if igt == true {
-			// make wrong turn
+			// make wrong turn.
 			req = "wrong turn"
 			if err := game.MakeTurn(g, &TurnData{X: 0, Y: 1}); err == nil || (err != nil && strings.HasPrefix(err.Error(), req) == false) {
 				t.Errorf("gamer %s succed to perform wrong turn: %q", g, err)
@@ -292,7 +254,7 @@ func TestMakeTurnFailures(t *testing.T) {
 			if err := game.MakeTurn(g, &TurnData{X: 1, Y: 1}); err != nil {
 				t.Fatalf("gamer %s failed to perform good turn: %q", g, err)
 			}
-			// after good turn - turne moved to other gamer, so next good turn must fail
+			// after good turn - turne moved to other gamer, so next good turn must fail.
 			req = fmt.Sprintf("not a gamer's %s turn", g)
 			if err := game.MakeTurn(g, &TurnData{X: 1, Y: 1}); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
 				t.Errorf("gamer %s succed to perform wrong turn: %q", g, err)
@@ -301,4 +263,44 @@ func TestMakeTurnFailures(t *testing.T) {
 			break
 		}
 	}
+}
+
+// waitGameTurnRoutine runs awaiting of the game, and of a turn for given gamer.
+func waitGameTurnRoutine(ctx context.Context, game Game, gamer *Gamer, ch chan<- error) {
+	defer close(ch)
+	err := game.WaitBegin(ctx, gamer)
+	if err != nil {
+		ch <- err
+	}
+
+	err = game.WaitTurn(ctx, gamer)
+	if err != nil {
+		ch <- err
+	}
+}
+
+// waitTurnRoutine awaits of gamer's turn.
+func waitTurnRoutine(ctx context.Context, game Game, gamer *Gamer, ch chan<- error) {
+	defer close(ch)
+	err := game.WaitTurn(ctx, gamer)
+	if err != nil {
+		ch <- err
+	}
+}
+
+// waitGameTurnMakeRoutine runs a game and then a turn awaiting.
+// after all - perform correct test, to provide turn change.
+func waitGameTurnMakeRoutine(ctx context.Context, game Game, gamer *Gamer, ch chan<- error) {
+	defer close(ch)
+	err := game.WaitBegin(ctx, gamer)
+	if err != nil {
+		ch <- err
+	}
+
+	err = game.WaitTurn(ctx, gamer)
+	if err != nil {
+		ch <- err
+		return
+	}
+	game.MakeTurn(gamer, &TurnData{X: 1, Y: 1})
 }

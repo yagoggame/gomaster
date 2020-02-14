@@ -24,7 +24,7 @@ import (
 	"time"
 )
 
-// TestGamerLeave - test the leaving of game procedure
+// TestGamerLeave tests the leaving of game procedure.
 func TestGamerLeave(t *testing.T) {
 	gamers := []*Gamer{
 		&Gamer{Name: "Joe", Id: 1},
@@ -56,7 +56,8 @@ func TestGamerLeave(t *testing.T) {
 
 }
 
-// TestGamerBeginSuccess - test: game with all gamers on the board should finish awaiting rapidly
+// TestGamerBeginSuccess checks if game with all gamers on the board 
+// finishes awaiting rapidly on leave.
 func TestGamerBeginLeave(t *testing.T) {
 	gamer := &Gamer{Name: "Joe", Id: 1}
 
@@ -76,7 +77,7 @@ func TestGamerBeginLeave(t *testing.T) {
 	gamer.InGame = game
 	go waitGameRoutine(ctx, game, gamer, ch)
 
-	//if one of gamers has left the game - awaiting of game begin should break
+	// if one of gamers has left the game - awaiting of game begin should break
 	time.Sleep(dur / 2)
 	if err := game.Leave(gamer); err != nil {
 		t.Errorf("Leave for gamer %s should succeed. got: %s", gamer, err)
@@ -95,7 +96,8 @@ func TestGamerBeginLeave(t *testing.T) {
 	}
 }
 
-// TestGamerLeaveEnd - test: game.End after game leave and closing of Game object as chanel
+// TestGamerLeaveEnd tests: game.End after game leave 
+// and closing of Game object as chanel.
 func TestGamerLeaveEnd(t *testing.T) {
 	gamer := &Gamer{Name: "Joe", Id: 1}
 
@@ -117,8 +119,9 @@ func TestGamerLeaveEnd(t *testing.T) {
 	}
 }
 
-// TestGamerLeaveBeginTurn - test: game with all gamers on the board should finish awaiting of turn with error
-// if Game object is closed as
+// TestGamerLeaveBeginTurn tests game with all gamers on the board 
+// should finish awaiting of turn with error
+// if Game object is closed as chanel.
 func TestGamerLeaveBeginTurn(t *testing.T) {
 	gamers := []*Gamer{
 		&Gamer{Name: "Joe", Id: 1},
@@ -135,7 +138,7 @@ func TestGamerLeaveBeginTurn(t *testing.T) {
 		g.InGame = game
 	}
 
-	//at this point all gamers has been joined, it is possible to wait a turn
+	// at this point all gamers has been joined, it is possible to wait a turn.
 	dur := time.Duration(100) * time.Millisecond
 	ctx, cancel := context.WithTimeout(context.Background(), dur)
 	defer cancel()
@@ -147,7 +150,7 @@ func TestGamerLeaveBeginTurn(t *testing.T) {
 		go waitTurnRoutine(ctx, game, g, chans[i])
 	}
 
-	//if gamer ho is turn leaving - other should catch an error of awaiting
+	// if gamer who is turn leaving - other should catch an error of awaiting.
 	time.Sleep(dur / 2)
 	for i, g := range gamers {
 		igt, err := game.IsMyTurn(gamers[i])
@@ -164,7 +167,7 @@ func TestGamerLeaveBeginTurn(t *testing.T) {
 
 	errs := make([]error, len(gamers))
 
-	//check the result
+	//check the result.
 	for i := 0; i < len(chans); i++ {
 		select {
 		case err, ok := <-chans[0]:
@@ -194,7 +197,8 @@ func TestGamerLeaveBeginTurn(t *testing.T) {
 
 }
 
-// TestGamerLeaveGameOver - tests game over error returning by some functions after game is over
+// TestGamerLeaveGameOver tests game over error returning 
+// by some functions after game is over.
 func TestGamerLeaveGameOver(t *testing.T) {
 	gamers := []*Gamer{
 		&Gamer{Name: "Joe", Id: 1},
@@ -240,7 +244,8 @@ func TestGamerLeaveGameOver(t *testing.T) {
 
 }
 
-// TestGamerLeaveGameOver - tests game over error returning by some functions after game is over
+// TestGamerLeaveGameOver tests game over error returning 
+// by some waiting functions after game is over.
 func TestGamerLeaveGameOverWaits(t *testing.T) {
 	gamers := []*Gamer{
 		&Gamer{Name: "Joe", Id: 1},
@@ -261,8 +266,8 @@ func TestGamerLeaveGameOverWaits(t *testing.T) {
 		t.Errorf("Leave for gamer %s should succeed. got: %s", gamers[0], err)
 	}
 
-	//now we can perform any waiting, wich should rapidly return an error "Game Over"
-	//at this point all gamers has been joined, it is possible to wait a turn
+	// now we can perform any waiting, wich should rapidly return an error "Game Over"
+	// at this point all gamers has been joined, it is possible to wait a turn.
 	dur := time.Duration(100) * time.Millisecond
 	ctx, cancel := context.WithTimeout(context.Background(), dur)
 	defer cancel()
@@ -282,7 +287,7 @@ func TestGamerLeaveGameOverWaits(t *testing.T) {
 		t.Fatalf("cancellation failed")
 	}
 
-	//wait of turn should fail
+	// wait of turn should fail.
 	ch = make(chan error)
 	go waitTurnRoutine(ctx, game, gamers[1], ch)
 
