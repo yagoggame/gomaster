@@ -63,6 +63,7 @@ func (gp GamersPool) AddGamer(gamer *game.Gamer) error {
 		return fmt.Errorf("unable to Add nil gamer")
 	}
 	c := make(chan interface{})
+	
 	gp <- &command{act: add, gamer: gamer, rez: c}
 
 	if err := <-c; err != nil {
@@ -140,37 +141,45 @@ func (gp GamersPool) Release() {
 ///////////////////////////////////////////////////////
 func addGamer(gamers map[int]*game.Gamer, gamer *game.Gamer, rezChan chan<- interface{}) {
 	defer close(rezChan)
-	if _, ok := gamers[gamer.Id]; ok == true {
+	
+	gCpy := *gamer
+	if _, ok := gamers[gCpy.Id]; ok == true {
 		rezChan <- fmt.Errorf("Id occupied")
 	}
-	gamers[gamer.Id] = gamer
+	gamers[gCpy.Id] = &gCpy
 }
 
 func rmGamer(gamers map[int]*game.Gamer, id int, rezChan chan<- interface{}) {
 	defer close(rezChan)
+	
 	if gamer, ok := gamers[id]; ok == true {
-		rezChan <- gamer
+		gCpy := *gamer
+		rezChan <- &gCpy
 	}
 	delete(gamers, id)
 }
 
 func listGamers(gamers map[int]*game.Gamer, rezChan chan<- interface{}) {
 	defer close(rezChan)
+	
 	rez := make([]*game.Gamer, 0, len(gamers))
 	for k := range gamers {
-		rez = append(rez, gamers[k])
+		gCpy := *gamers[k]
+		rez = append(rez, &gCpy)
 	}
 	rezChan <- rez
 }
 
 func getGamer(gamers map[int]*game.Gamer, id int, rezChan chan<- interface{}) {
 	defer close(rezChan)
+	
 	gamer, ok := gamers[id]
 	if ok == false {
 		rezChan <- fmt.Errorf("no gamer with id %d in the Pool", id)
 		return
 	}
-	rezChan <- gamer
+	gCpy := *gamer
+	rezChan <- &gCpy
 	return
 }
 

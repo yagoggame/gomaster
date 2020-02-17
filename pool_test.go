@@ -19,6 +19,7 @@ package gomaster
 import (
 	"fmt"
 	"math"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -137,8 +138,8 @@ func TestPoolRemove(t *testing.T) {
 			if tc.success == false && removedGamer != nil {
 				t.Errorf("It was expected that RmGamer will return nill gamer pointer, got: %v", removedGamer)
 			}
-			if tc.success == true && removedGamer != tc.gamer {
-				t.Errorf("It was expected that RmGamer will return non nill gamer pointer: %v got %v", tc.gamer, removedGamer)
+			if tc.success == true && (removedGamer == nil || !reflect.DeepEqual(*removedGamer, *tc.gamer)) {
+				t.Errorf("It was expected that RmGamer will return non nill pointer to a gamer: %v got %v", tc.gamer, removedGamer)
 			}
 
 			actualGamers := pool.ListGamers()
@@ -201,12 +202,13 @@ func TestPoolGet(t *testing.T) {
 			if tc.success == false && gettedGamer != nil {
 				t.Errorf("It was expected that GetGamer will return nill gamer pointer, got: %v", gettedGamer)
 			}
-			if tc.success == true && gettedGamer != tc.gamer {
-				t.Errorf("It was expected that GetGamer will return non nill gamer pointer: %v got %v", tc.gamer, gettedGamer)
+			if tc.success == true && (gettedGamer == nil || !reflect.DeepEqual(*gettedGamer, *tc.gamer)) {
+				t.Errorf("It was expected that RmGamer will return non nill pointer to a gamer: %v got %v", tc.gamer, gettedGamer)
 			}
 
-			if removedGamer, _ := pool.RmGamer(tc.id); removedGamer != gettedGamer {
-				t.Errorf("It was expected that GetGamer will return Same value that RmGamer. got: %v, %v", gettedGamer, removedGamer)
+			removedGamer, _ := pool.RmGamer(tc.id)
+			if !(removedGamer==nil && gettedGamer==nil) && (removedGamer==nil || gettedGamer==nil || !reflect.DeepEqual(*gettedGamer, *tc.gamer)){
+				t.Errorf("It was expected that GetGamer will return pointer to the same value that RmGamer. got: %v, %v", gettedGamer, removedGamer)
 			}
 		})
 	}

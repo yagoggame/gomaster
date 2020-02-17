@@ -27,5 +27,5 @@ type Gamer struct {
 
 // String provides compatibility with Stringer interface.
 func (g *Gamer) String() string {
-	return fmt.Sprintf("[ id: %d, name: %q, isInPlay: %v ]", g.Id, g.Name, g.InGame)
+	return fmt.Sprintf("[ id: %d, name: %q, InGame: %v ]", g.Id, g.Name, g.InGame)
 }
