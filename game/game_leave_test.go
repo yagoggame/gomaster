@@ -37,7 +37,7 @@ func TestGamerLeave(t *testing.T) {
 
 	// not joined gamer should fail
 	req := fmt.Sprintf("not joined gamer %s tries to leave the game", fg)
-	if err := game.Leave(fg); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
+	if err := game.Leave(fg.Id); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
 		t.Errorf("Leave for gamer %s should succeed. got: %s", fg, err)
 	}
 
@@ -49,7 +49,7 @@ func TestGamerLeave(t *testing.T) {
 	}
 
 	for _, g := range gamers {
-		if err := game.Leave(g); err != nil {
+		if err := game.Leave(g.Id); err != nil {
 			t.Errorf("Leave for gamer %s should succeed. got: %s", g, err)
 		}
 	}
@@ -79,7 +79,7 @@ func TestGamerBeginLeave(t *testing.T) {
 
 	// if one of gamers has left the game - awaiting of game begin should break
 	time.Sleep(dur / 2)
-	if err := game.Leave(gamer); err != nil {
+	if err := game.Leave(gamer.Id); err != nil {
 		t.Errorf("Leave for gamer %s should succeed. got: %s", gamer, err)
 	}
 
@@ -114,7 +114,7 @@ func TestGamerLeaveEnd(t *testing.T) {
 		t.Fatalf("failed to join gamer %s to a game %v: %q", gamer, game, err)
 	}
 	gamer.InGame = game
-	if err := game.Leave(gamer); err != nil {
+	if err := game.Leave(gamer.Id); err != nil {
 		t.Fatalf("Leave for gamer %s should succeed. got: %s", gamer, err)
 	}
 }
@@ -153,12 +153,12 @@ func TestGamerLeaveBeginTurn(t *testing.T) {
 	// if gamer who is turn leaving - other should catch an error of awaiting.
 	time.Sleep(dur / 2)
 	for i, g := range gamers {
-		igt, err := game.IsMyTurn(gamers[i])
+		igt, err := game.IsMyTurn(gamers[i].Id)
 		if err != nil {
 			t.Fatalf("failed to inspect: is it gamer's %s turn: %s", g, err)
 		}
 		if igt == true {
-			if err := game.Leave(g); err != nil {
+			if err := game.Leave(g.Id); err != nil {
 				t.Fatalf("Leave for gamer %s should succeed. got: %s", g, err)
 			}
 			break
@@ -215,7 +215,7 @@ func TestGamerLeaveGameOver(t *testing.T) {
 		g.InGame = game
 	}
 
-	if err := game.Leave(gamers[0]); err != nil {
+	if err := game.Leave(gamers[0].Id); err != nil {
 		t.Errorf("Leave for gamer %s should succeed. got: %s", gamers[0], err)
 	}
 
@@ -225,20 +225,20 @@ func TestGamerLeaveGameOver(t *testing.T) {
 		t.Errorf("supposed result of Join: %q , got: %v", req, err)
 	}
 
-	if _, err := game.IsGameBegun(gamers[1]); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
+	if _, err := game.IsGameBegun(gamers[1].Id); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
 		t.Errorf("supposed result of IsGameBegun: %q , got: %v", req, err)
 	}
 
-	if _, err := game.IsMyTurn(gamers[1]); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
+	if _, err := game.IsMyTurn(gamers[1].Id); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
 		t.Errorf("supposed result of IsMyTurn: %q , got: %v", req, err)
 	}
 
 	// user that is not disjoined yet - can access to the game data.
-	if _, err := game.GamerState(gamers[1]); err != nil {
+	if _, err := game.GamerState(gamers[1].Id); err != nil {
 		t.Errorf("supposed result of GamerState: nil , got: %v", err)
 	}
 
-	if err := game.MakeTurn(gamers[1], &TurnData{X: 1, Y: 1}); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
+	if err := game.MakeTurn(gamers[1].Id, &TurnData{X: 1, Y: 1}); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
 		t.Errorf("supposed result of IsMyTurn: %q , got: %v", req, err)
 	}
 
@@ -262,7 +262,7 @@ func TestGamerLeaveGameOverWaits(t *testing.T) {
 		g.InGame = game
 	}
 
-	if err := game.Leave(gamers[0]); err != nil {
+	if err := game.Leave(gamers[0].Id); err != nil {
 		t.Errorf("Leave for gamer %s should succeed. got: %s", gamers[0], err)
 	}
 

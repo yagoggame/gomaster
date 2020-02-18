@@ -196,13 +196,13 @@ func TestIsMyTurn(t *testing.T) {
 	// excep for the foreign gamers.
 	fg := &Gamer{Name: "Sir", Id: 3}
 	req := fmt.Sprintf("not joined gamer %s tries to ask: is it his turn", fg)
-	if igt, err := game.IsMyTurn(fg); igt == true || err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
+	if igt, err := game.IsMyTurn(fg.Id); igt == true || err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
 		t.Errorf("succed to inspect foreign gamer's %s turn: %q", fg, err)
 	}
 
 	// is now gamer's turn should performe without errors.
 	for i, g := range gamers {
-		descs[i].igt, descs[i].err = game.IsMyTurn(gamers[i])
+		descs[i].igt, descs[i].err = game.IsMyTurn(gamers[i].Id)
 		if descs[i].err != nil {
 			t.Fatalf("failed to inspect: is it gamer's %s turn: %s", g, descs[i].err)
 		}
@@ -234,29 +234,29 @@ func TestMakeTurnFailures(t *testing.T) {
 	// excep for the foreign gamers.
 	fg := &Gamer{Name: "Sir", Id: 3}
 	req := fmt.Sprintf("not joined gamer %s tries to make a turn", fg)
-	if err := game.MakeTurn(fg, &TurnData{X: 1, Y: 1}); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
+	if err := game.MakeTurn(fg.Id, &TurnData{X: 1, Y: 1}); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
 		t.Errorf("succed to inspect foreign gamer's %s turn: %q", fg, err)
 	}
 
 	// other tipical errors.
 	for _, g := range gamers {
-		igt, err := game.IsMyTurn(g)
+		igt, err := game.IsMyTurn(g.Id)
 		if err != nil {
 			t.Fatalf("failed to IsMyTurn: %s", err)
 		}
 		if igt == true {
 			// make wrong turn.
 			req = "wrong turn"
-			if err := game.MakeTurn(g, &TurnData{X: 0, Y: 1}); err == nil || (err != nil && strings.HasPrefix(err.Error(), req) == false) {
+			if err := game.MakeTurn(g.Id, &TurnData{X: 0, Y: 1}); err == nil || (err != nil && strings.HasPrefix(err.Error(), req) == false) {
 				t.Errorf("gamer %s succed to perform wrong turn: %q", g, err)
 			}
 			// make goof turn
-			if err := game.MakeTurn(g, &TurnData{X: 1, Y: 1}); err != nil {
+			if err := game.MakeTurn(g.Id, &TurnData{X: 1, Y: 1}); err != nil {
 				t.Fatalf("gamer %s failed to perform good turn: %q", g, err)
 			}
 			// after good turn - turne moved to other gamer, so next good turn must fail.
 			req = fmt.Sprintf("not a gamer's %s turn", g)
-			if err := game.MakeTurn(g, &TurnData{X: 1, Y: 1}); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
+			if err := game.MakeTurn(g.Id, &TurnData{X: 1, Y: 1}); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
 				t.Errorf("gamer %s succed to perform wrong turn: %q", g, err)
 			}
 
@@ -268,12 +268,12 @@ func TestMakeTurnFailures(t *testing.T) {
 // waitGameTurnRoutine runs awaiting of the game, and of a turn for given gamer.
 func waitGameTurnRoutine(ctx context.Context, game Game, gamer *Gamer, ch chan<- error) {
 	defer close(ch)
-	err := game.WaitBegin(ctx, gamer)
+	err := game.WaitBegin(ctx, gamer.Id)
 	if err != nil {
 		ch <- err
 	}
 
-	err = game.WaitTurn(ctx, gamer)
+	err = game.WaitTurn(ctx, gamer.Id)
 	if err != nil {
 		ch <- err
 	}
@@ -282,7 +282,7 @@ func waitGameTurnRoutine(ctx context.Context, game Game, gamer *Gamer, ch chan<-
 // waitTurnRoutine awaits of gamer's turn.
 func waitTurnRoutine(ctx context.Context, game Game, gamer *Gamer, ch chan<- error) {
 	defer close(ch)
-	err := game.WaitTurn(ctx, gamer)
+	err := game.WaitTurn(ctx, gamer.Id)
 	if err != nil {
 		ch <- err
 	}
@@ -292,15 +292,15 @@ func waitTurnRoutine(ctx context.Context, game Game, gamer *Gamer, ch chan<- err
 // after all - perform correct test, to provide turn change.
 func waitGameTurnMakeRoutine(ctx context.Context, game Game, gamer *Gamer, ch chan<- error) {
 	defer close(ch)
-	err := game.WaitBegin(ctx, gamer)
+	err := game.WaitBegin(ctx, gamer.Id)
 	if err != nil {
 		ch <- err
 	}
 
-	err = game.WaitTurn(ctx, gamer)
+	err = game.WaitTurn(ctx, gamer.Id)
 	if err != nil {
 		ch <- err
 		return
 	}
-	game.MakeTurn(gamer, &TurnData{X: 1, Y: 1})
+	game.MakeTurn(gamer.Id, &TurnData{X: 1, Y: 1})
 }

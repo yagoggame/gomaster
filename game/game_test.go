@@ -97,14 +97,14 @@ func TestGamerState(t *testing.T) {
 	//get state of foreign gamer should fail.
 	fg := &Gamer{Name: "Dick", Id: 3}
 	req := fmt.Sprintf("not joined gamer %s tries to get his state in the game", fg)
-	if gs, err := game.GamerState(fg); err == nil || strings.Compare(err.Error(), req) != 0 || gs.Colour != NoColour {
+	if gs, err := game.GamerState(fg.Id); err == nil || strings.Compare(err.Error(), req) != 0 || gs.Colour != NoColour {
 		t.Errorf("supposed %q error and GamerState.Colour==NoColour, got: err: %v, gs: %v", req, err, gs)
 	}
 
 	//joined gamers shoul succeed.
 	usedColours := make(map[ChipColour]bool)
 	for _, g := range gamers {
-		gs, err := game.GamerState(g)
+		gs, err := game.GamerState(g.Id)
 		switch {
 		case err != nil:
 			t.Errorf("failed to obtain gamer's %s state: %s", g, err)
@@ -137,18 +137,18 @@ func TestIsGameBegin(t *testing.T) {
 		}
 		switch i {
 		case 0:
-			if igb, err := game.IsGameBegun(g); err != nil || igb == true {
+			if igb, err := game.IsGameBegun(g.Id); err != nil || igb == true {
 				t.Fatalf("i: %d - supposed err=nil, igb=false, got:err=\"%v\",igb=%t", i, err, igb)
 			}
 		case 1:
-			if igb, err := game.IsGameBegun(g); err != nil || igb == false {
+			if igb, err := game.IsGameBegun(g.Id); err != nil || igb == false {
 				t.Fatalf("i: %d - supposed err=nil, igb=false, got:err=\"%v\",igb=%t", i, err, igb)
 			}
 		}
 	}
 
 	req := fmt.Sprintf("not joined gamer %s tries to ask: is game begun", fg)
-	if igb, err := game.IsGameBegun(fg); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
+	if igb, err := game.IsGameBegun(fg.Id); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
 		t.Fatalf("foreign gamer %s. supposed err=nil, igb=false, got:err=\"%v\",igb=%t", fg, err, igb)
 	}
 }
@@ -275,7 +275,7 @@ func TestGamerBeginForeign(t *testing.T) {
 // waitGameRoutine waits of game the begin for specified gamer.
 func waitGameRoutine(ctx context.Context, game Game, gamer *Gamer, ch chan<- error) {
 	defer close(ch)
-	err := game.WaitBegin(ctx, gamer)
+	err := game.WaitBegin(ctx, gamer.Id)
 	if err != nil {
 		ch <- err
 	}
