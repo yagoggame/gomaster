@@ -207,6 +207,9 @@ func joinGame(gamers map[int]*game.Gamer, id int, rezChan chan<- interface{}) {
 		rezChan <- fmt.Errorf("failed to join gamer with id %d to a game: %w", id, GamerOccupiedError)
 		return
 	}
+	
+	//copy the gamer to prevent of chnging by the Game
+	gCpy=*gamer
 	// iterate over gamers
 	for _, g := range gamers {
 		// playing with yourself is a sin, but we are need a gamer's object
@@ -216,7 +219,7 @@ func joinGame(gamers map[int]*game.Gamer, id int, rezChan chan<- interface{}) {
 		// try to join to a gamer's game
 		if g.InGame != nil {
 			// if succed - it's all, else - no matter: will try with other player or start his own game
-			if err := g.InGame.Join(gamer); err == nil {
+			if err := g.InGame.Join(&gCpy); err == nil {
 				gamer.InGame = g.InGame
 				return
 			}
@@ -226,7 +229,7 @@ func joinGame(gamers map[int]*game.Gamer, id int, rezChan chan<- interface{}) {
 
 	// if no partner found - start his own game
 	game := game.NewGame()
-	if err := game.Join(gamer); err != nil {
+	if err := game.Join(&gCpy); err != nil {
 		// if can't - finish game and make a gamer vacant
 		gamer.InGame = nil
 		rezChan <- fmt.Errorf("failed to join gamer with id %d to a game: %w: %s", id, GamerGameStartError, err)
