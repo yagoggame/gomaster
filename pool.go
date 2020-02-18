@@ -18,9 +18,19 @@
 package gomaster
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/yagoggame/gomaster/game"
+)
+
+//errors
+var (
+	NilGamerError       = errors.New("failed to operate on nil gamer")
+	IdNotFoundError     = errors.New("no gamer with such id in the Pool")
+	IdOccupiedError     = errors.New("id occupied")
+	GamerOccupiedError  = errors.New("gamer already joined to another game")
+	GamerGameStartError = errors.New("gamer failed to start a new game")
 )
 
 ///////////////////////////////////////////////////////
@@ -60,10 +70,10 @@ type GamersPool chan *command
 // AddGamer adds a gamer to the pool if he's not already there.
 func (gp GamersPool) AddGamer(gamer *game.Gamer) error {
 	if gamer == nil {
-		return fmt.Errorf("unable to Add nil gamer")
+		return NilGamerError
 	}
 	c := make(chan interface{})
-	
+
 	gp <- &command{act: add, gamer: gamer, rez: c}
 
 	if err := <-c; err != nil {
@@ -79,7 +89,7 @@ func (gp GamersPool) RmGamer(id int) (gamer *game.Gamer, err error) {
 
 	gamer, ok := (<-c).(*game.Gamer)
 	if ok == false {
-		return nil, fmt.Errorf("no gamer with id %d in the Pool", id)
+		return nil, fmt.Errorf("failed to rm gamer for id %d: %w", id, IdNotFoundError)
 	}
 	return gamer, nil
 }
@@ -141,17 +151,17 @@ func (gp GamersPool) Release() {
 ///////////////////////////////////////////////////////
 func addGamer(gamers map[int]*game.Gamer, gamer *game.Gamer, rezChan chan<- interface{}) {
 	defer close(rezChan)
-	
+
 	gCpy := *gamer
 	if _, ok := gamers[gCpy.Id]; ok == true {
-		rezChan <- fmt.Errorf("Id occupied")
+		rezChan <- fmt.Errorf("failed to add gamer with id %d to a pool: %w", gCpy.Id, IdOccupiedError)
 	}
 	gamers[gCpy.Id] = &gCpy
 }
 
 func rmGamer(gamers map[int]*game.Gamer, id int, rezChan chan<- interface{}) {
 	defer close(rezChan)
-	
+
 	if gamer, ok := gamers[id]; ok == true {
 		gCpy := *gamer
 		rezChan <- &gCpy
@@ -161,7 +171,7 @@ func rmGamer(gamers map[int]*game.Gamer, id int, rezChan chan<- interface{}) {
 
 func listGamers(gamers map[int]*game.Gamer, rezChan chan<- interface{}) {
 	defer close(rezChan)
-	
+
 	rez := make([]*game.Gamer, 0, len(gamers))
 	for k := range gamers {
 		gCpy := *gamers[k]
@@ -172,10 +182,10 @@ func listGamers(gamers map[int]*game.Gamer, rezChan chan<- interface{}) {
 
 func getGamer(gamers map[int]*game.Gamer, id int, rezChan chan<- interface{}) {
 	defer close(rezChan)
-	
+
 	gamer, ok := gamers[id]
 	if ok == false {
-		rezChan <- fmt.Errorf("no gamer with id %d in the Pool", id)
+		rezChan <- fmt.Errorf("failed to get gamer for id %d: %w", id, IdNotFoundError)
 		return
 	}
 	gCpy := *gamer
@@ -188,13 +198,13 @@ func joinGame(gamers map[int]*game.Gamer, id int, rezChan chan<- interface{}) {
 	// get a gamer by id. If there is no such gamer - it's  bad
 	gamer, ok := gamers[id]
 	if ok == false {
-		rezChan <- fmt.Errorf("can't join a game: can't find gamer with id %d", id)
+		rezChan <- fmt.Errorf("failed to join gamer with id %d to a game: %w", id, IdNotFoundError)
 		return
 	}
 
 	// if gamer already playing - for now, let's interpret it like an error
 	if gamer.InGame != nil {
-		rezChan <- fmt.Errorf("can't join a game: gamer %v already joined to another game", gamer)
+		rezChan <- fmt.Errorf("failed to join gamer with id %d to a game: %w", id, GamerOccupiedError)
 		return
 	}
 	// iterate over gamers
@@ -219,7 +229,7 @@ func joinGame(gamers map[int]*game.Gamer, id int, rezChan chan<- interface{}) {
 	if err := game.Join(gamer); err != nil {
 		// if can't - finish game and make a gamer vacant
 		gamer.InGame = nil
-		rezChan <- fmt.Errorf("can't join a game: gamer %v unable to start a new game: %s", gamer, err)
+		rezChan <- fmt.Errorf("failed to join gamer with id %d to a game: %w: %s", id, GamerGameStartError, err)
 		game.End()
 		return
 	}
@@ -231,7 +241,7 @@ func releaseGame(gamers map[int]*game.Gamer, id int, rezChan chan<- interface{})
 	//  get a gamer by id. If there is no such gamer - it's  bad
 	gamer, ok := gamers[id]
 	if ok == false {
-		rezChan <- fmt.Errorf("can't release a game: can't find gamer with id %d", id)
+		rezChan <- fmt.Errorf("failed to release game for id %d: %w", id, IdNotFoundError)
 		return
 	}
 
