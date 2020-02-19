@@ -18,8 +18,7 @@ package game
 
 import (
 	"context"
-	"fmt"
-	"strings"
+	"errors"
 	"testing"
 	"time"
 )
@@ -74,11 +73,11 @@ func TestGamerBeginTurnSuccess(t *testing.T) {
 	}
 
 	if errs[0] != nil && errs[1] != nil {
-		t.Errorf("one of gamers should be assigned as \"his turn\", got: \"%v\" \"%v\"", errs[0], errs[1])
+		t.Errorf("one of gamers should be assigned as \"his turn\",\ngot: \"%v\",and: \n\"%v\"", errs[0], errs[1])
 	}
 
 	if errs[0] == nil && errs[1] == nil {
-		t.Errorf("one of gamers should be in awaiting condition and canceled by context, got: \"%v\" \"%v\"", errs[0], errs[1])
+		t.Errorf("one of gamers should be in awaiting condition and canceled by context, got:\n\"%v\",and: \n\"%v\"", errs[0], errs[1])
 	}
 }
 
@@ -103,19 +102,19 @@ func TestGamerBeginTurnForeign(t *testing.T) {
 	fg := &Gamer{Name: "Nick", Id: 2}
 	go waitTurnRoutine(ctx, game, fg, ch)
 
-	req := fmt.Sprintf("not joined gamer %s tries to await of his turn", fg)
+	want := UnknownIdError
 	select {
 	case err, ok := <-ch:
 		ch = nil
-		if !ok || (ok && strings.Compare(err.Error(), req) != 0) {
-			t.Errorf("supposed result of WaitBegin: %q, got: %s", req, err)
+		if !ok || !errors.Is(err, want) {
+			t.Errorf("WaitBegin:\nwant: %q,\ngot: %s", want, err)
 		}
 	case <-time.After(2 * dur):
 		t.Fatalf("cancellation failed")
 	}
 }
 
-// TestGamerMakeTurnSuccess checks that game with all gamers on the board 
+// TestGamerMakeTurnSuccess checks that game with all gamers on the board
 // should finish awaiting of turn for the one player rapidly
 // and wait for a turn change for other with success.
 func TestGamerMakeTurnSuccess(t *testing.T) {
@@ -165,7 +164,7 @@ func TestGamerMakeTurnSuccess(t *testing.T) {
 	}
 
 	if errs[0] != nil && errs[1] != nil {
-		t.Errorf("both of the  gamers should be assigned as \"his turn\", sequentially. got: \"%v\" \"%v\"", errs[0], errs[1])
+		t.Errorf("both of the  gamers should be assigned as \"his turn\", sequentially.\ngot: \"%v\"\nand: \"%v\"", errs[0], errs[1])
 	}
 }
 
@@ -195,9 +194,9 @@ func TestIsMyTurn(t *testing.T) {
 
 	// excep for the foreign gamers.
 	fg := &Gamer{Name: "Sir", Id: 3}
-	req := fmt.Sprintf("not joined gamer %s tries to ask: is it his turn", fg)
-	if igt, err := game.IsMyTurn(fg.Id); igt == true || err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
-		t.Errorf("succed to inspect foreign gamer's %s turn: %q", fg, err)
+	want := UnknownIdError
+	if igt, err := game.IsMyTurn(fg.Id); !errors.Is(err, want) || igt == true {
+		t.Errorf("IsMyTurn for foreign gamer %s:\nwant: igt=false, err=%v,\ngot: igt=%t, err=%v", fg, want, igt, err)
 	}
 
 	// is now gamer's turn should performe without errors.
@@ -233,9 +232,9 @@ func TestMakeTurnFailures(t *testing.T) {
 
 	// excep for the foreign gamers.
 	fg := &Gamer{Name: "Sir", Id: 3}
-	req := fmt.Sprintf("not joined gamer %s tries to make a turn", fg)
-	if err := game.MakeTurn(fg.Id, &TurnData{X: 1, Y: 1}); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
-		t.Errorf("succed to inspect foreign gamer's %s turn: %q", fg, err)
+	want := UnknownIdError
+	if err := game.MakeTurn(fg.Id, &TurnData{X: 1, Y: 1}); !errors.Is(err, want) {
+		t.Errorf("MakeTurn for gamer %s:\nwant: %v,\ngot: %v", fg, want, err)
 	}
 
 	// other tipical errors.
@@ -246,20 +245,19 @@ func TestMakeTurnFailures(t *testing.T) {
 		}
 		if igt == true {
 			// make wrong turn.
-			req = "wrong turn"
-			if err := game.MakeTurn(g.Id, &TurnData{X: 0, Y: 1}); err == nil || (err != nil && strings.HasPrefix(err.Error(), req) == false) {
-				t.Errorf("gamer %s succed to perform wrong turn: %q", g, err)
+			want = WrongTurnError
+			if err := game.MakeTurn(g.Id, &TurnData{X: 0, Y: 1}); !errors.Is(err, want) {
+				t.Errorf("gamer %s wrong turn:\nwant: %v,\ngot: %v", g, want, err)
 			}
-			// make goof turn
+			// make good turn
 			if err := game.MakeTurn(g.Id, &TurnData{X: 1, Y: 1}); err != nil {
-				t.Fatalf("gamer %s failed to perform good turn: %q", g, err)
+				t.Fatalf("gamer %s good turn:\nwant: nil error,\ngot: %v", g, err)
 			}
 			// after good turn - turne moved to other gamer, so next good turn must fail.
-			req = fmt.Sprintf("not a gamer's %s turn", g)
-			if err := game.MakeTurn(g.Id, &TurnData{X: 1, Y: 1}); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
-				t.Errorf("gamer %s succed to perform wrong turn: %q", g, err)
+			want = NotYourTurnError
+			if err := game.MakeTurn(g.Id, &TurnData{X: 1, Y: 1}); !errors.Is(err, want) {
+				t.Errorf("not gamer's %s turn:\nwant: %v,\ngot: %v", g, want, err)
 			}
-
 			break
 		}
 	}

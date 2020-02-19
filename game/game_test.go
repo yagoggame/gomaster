@@ -18,8 +18,7 @@ package game
 
 import (
 	"context"
-	"fmt"
-	"strings"
+	"errors"
 	"testing"
 	"time"
 )
@@ -29,13 +28,13 @@ func TestCreateJoinEnd(t *testing.T) {
 	type testCase struct {
 		caseName string
 		gamer    *Gamer
-		req      string
+		want     error
 		success  bool
 	}
 	tt := []testCase{
-		testCase{caseName: "first", gamer: &Gamer{Name: "Joe", Id: 1}, req: "", success: true},
-		testCase{caseName: "second", gamer: &Gamer{Name: "Nick", Id: 2}, req: "", success: true},
-		testCase{caseName: "third", gamer: &Gamer{Name: "Buss", Id: 3}, req: "no vacant place in Game", success: false},
+		testCase{caseName: "first", gamer: &Gamer{Name: "Joe", Id: 1}, want: nil, success: true},
+		testCase{caseName: "second", gamer: &Gamer{Name: "Nick", Id: 2}, want: nil, success: true},
+		testCase{caseName: "third", gamer: &Gamer{Name: "Buss", Id: 3}, want: NoPlaceError, success: false},
 	}
 
 	game := NewGame()
@@ -47,12 +46,10 @@ func TestCreateJoinEnd(t *testing.T) {
 		t.Run(tc.caseName, func(t *testing.T) {
 			err := game.Join(tc.gamer)
 			switch {
-			case tc.success == false && err == nil:
-				t.Errorf("supposed %q error, got: %v", tc.req, err)
+			case tc.success == false && !errors.Is(err, tc.want):
+				t.Errorf("Join:\nwant: %v,\ngot: %v", tc.want, err)
 			case tc.success == true && err != nil:
-				t.Errorf("supposed nil error, got: %q", err)
-			case tc.success == false && err != nil && strings.Compare(err.Error(), tc.req) != 0:
-				t.Errorf("supposed nil error, got: %q", err)
+				t.Errorf("Join:\nwant: nil error, got: %v", err)
 			}
 		})
 	}
@@ -70,14 +67,14 @@ func TestCreateJoinEnd(t *testing.T) {
 	select {
 	case ok := <-c:
 		if ok == true {
-			t.Fatalf("It was expected that game.End() will shut down Game object as chanel, but it's still alive")
+			t.Fatalf("game.End():\nwant : Game object closed as chanel,\ngot: Game object not a closed chanel")
 		}
 	case <-time.After(dur):
-		t.Fatalf("It was expected that game.End() will return earler than %v duration", dur)
+		t.Fatalf("game.End():\nwant: return earler than %v duration,\ngot: return after %v duration", dur, dur)
 	}
 }
 
-// TestGamerState performs request of gamer's state.
+// TestGamerState performs wantuest of gamer's state.
 func TestGamerState(t *testing.T) {
 	gamers := []*Gamer{
 		&Gamer{Name: "Joe", Id: 1},
@@ -96,12 +93,12 @@ func TestGamerState(t *testing.T) {
 
 	//get state of foreign gamer should fail.
 	fg := &Gamer{Name: "Dick", Id: 3}
-	req := fmt.Sprintf("not joined gamer %s tries to get his state in the game", fg)
-	if gs, err := game.GamerState(fg.Id); err == nil || strings.Compare(err.Error(), req) != 0 || gs.Colour != NoColour {
-		t.Errorf("supposed %q error and GamerState.Colour==NoColour, got: err: %v, gs: %v", req, err, gs)
+	want := UnknownIdError
+	if gs, err := game.GamerState(fg.Id); !errors.Is(err, want) || gs.Colour != NoColour {
+		t.Errorf("GamerState:\nwant: err: %v, gs.Colour: NoColour,\ngot: err: %v, gs.Colour: %v", want, err, gs)
 	}
 
-	//joined gamers shoul succeed.
+	//joined gamers should succeed.
 	usedColours := make(map[ChipColour]bool)
 	for _, g := range gamers {
 		gs, err := game.GamerState(g.Id)
@@ -138,22 +135,22 @@ func TestIsGameBegin(t *testing.T) {
 		switch i {
 		case 0:
 			if igb, err := game.IsGameBegun(g.Id); err != nil || igb == true {
-				t.Fatalf("i: %d - supposed err=nil, igb=false, got:err=\"%v\",igb=%t", i, err, igb)
+				t.Fatalf("Join i=%d:\nwant: err=nil, igb=false,\ngot:err=\"%v\",igb=%t", i, err, igb)
 			}
 		case 1:
 			if igb, err := game.IsGameBegun(g.Id); err != nil || igb == false {
-				t.Fatalf("i: %d - supposed err=nil, igb=false, got:err=\"%v\",igb=%t", i, err, igb)
+				t.Fatalf("Join i=%d\nwant: err=nil, igb=false,\ngot:err=\"%v\",igb=%t", i, err, igb)
 			}
 		}
 	}
 
-	req := fmt.Sprintf("not joined gamer %s tries to ask: is game begun", fg)
-	if igb, err := game.IsGameBegun(fg.Id); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
-		t.Fatalf("foreign gamer %s. supposed err=nil, igb=false, got:err=\"%v\",igb=%t", fg, err, igb)
+	want := UnknownIdError
+	if igb, err := game.IsGameBegun(fg.Id); !errors.Is(err, want) {
+		t.Fatalf("foreign gamer %s:\nwant: err=%v, igb=false,\ngot:err=\"%v\",igb=%t", fg, want, err, igb)
 	}
 }
 
-// TestGamerBeginSuccess tests game with all gamers on the board. 
+// TestGamerBeginSuccess tests game with all gamers on the board.
 // It should finish awaiting rapidly
 func TestGamerBeginSuccess(t *testing.T) {
 	gamers := []*Gamer{
@@ -205,7 +202,7 @@ func TestGamerBeginSuccess(t *testing.T) {
 	}
 }
 
-// TestGamerBeginFailure tests game with missing gamer. 
+// TestGamerBeginFailure tests game with missing gamer.
 // It should hang untill second player join and return error on cancellation
 func TestGamerBeginFailure(t *testing.T) {
 	gamer := &Gamer{Name: "Joe", Id: 1}
@@ -226,19 +223,19 @@ func TestGamerBeginFailure(t *testing.T) {
 	gamer.InGame = game
 	go waitGameRoutine(ctx, game, gamer, ch)
 
-	req := fmt.Sprintf("Cancelled")
+	want := CancellationError
 	select {
 	case err, ok := <-ch:
 		ch = nil
-		if !ok || (ok && strings.Compare(err.Error(), req) != 0) {
-			t.Errorf("supposed result of WaitBegin: %q, got: %s", req, err)
+		if !ok || !errors.Is(err, want) {
+			t.Errorf("WaitBegin:\nwant: %v,\ngot: %v", want, err)
 		}
 	case <-time.After(2 * dur):
 		t.Fatalf("cancellation failed")
 	}
 }
 
-// TestGamerBeginForeign checks that not joined gamer 
+// TestGamerBeginForeign checks that not joined gamer
 // fails rapidly on game begin awaiting
 func TestGamerBeginForeign(t *testing.T) {
 	gamer := &Gamer{Name: "Joe", Id: 1}
@@ -260,12 +257,12 @@ func TestGamerBeginForeign(t *testing.T) {
 	fg := &Gamer{Name: "Nick", Id: 2}
 	go waitGameRoutine(ctx, game, fg, ch)
 
-	req := fmt.Sprintf("not joined gamer %s tries to await of game begin", fg)
+	want := UnknownIdError
 	select {
 	case err, ok := <-ch:
 		ch = nil
-		if !ok || (ok && strings.Compare(err.Error(), req) != 0) {
-			t.Errorf("supposed result of WaitBegin: %q, got: %s", req, err)
+		if !ok || !errors.Is(err, want) {
+			t.Errorf("WaitBegin:\nwant: %v,\ngot: %v", want, err)
 		}
 	case <-time.After(2 * dur):
 		t.Fatalf("cancellation failed")

@@ -18,8 +18,7 @@ package game
 
 import (
 	"context"
-	"fmt"
-	"strings"
+	"errors"
 	"testing"
 	"time"
 )
@@ -36,9 +35,9 @@ func TestGamerLeave(t *testing.T) {
 	// 	defer game.End()
 
 	// not joined gamer should fail
-	req := fmt.Sprintf("not joined gamer %s tries to leave the game", fg)
-	if err := game.Leave(fg.Id); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
-		t.Errorf("Leave for gamer %s should succeed. got: %s", fg, err)
+	want := UnknownIdError
+	if err := game.Leave(fg.Id); !errors.Is(err, want) {
+		t.Errorf("Leave for gamer %s:\nwant: %v\ngot: %v", fg, want, err)
 	}
 
 	for _, g := range gamers {
@@ -50,13 +49,13 @@ func TestGamerLeave(t *testing.T) {
 
 	for _, g := range gamers {
 		if err := game.Leave(g.Id); err != nil {
-			t.Errorf("Leave for gamer %s should succeed. got: %s", g, err)
+			t.Errorf("Leave for gamer %s should succeed.\ngot: %s", g, err)
 		}
 	}
 
 }
 
-// TestGamerBeginSuccess checks if game with all gamers on the board 
+// TestGamerBeginSuccess checks if game with all gamers on the board
 // finishes awaiting rapidly on leave.
 func TestGamerBeginLeave(t *testing.T) {
 	gamer := &Gamer{Name: "Joe", Id: 1}
@@ -80,46 +79,46 @@ func TestGamerBeginLeave(t *testing.T) {
 	// if one of gamers has left the game - awaiting of game begin should break
 	time.Sleep(dur / 2)
 	if err := game.Leave(gamer.Id); err != nil {
-		t.Errorf("Leave for gamer %s should succeed. got: %s", gamer, err)
+		t.Errorf("Leave for gamer %s should succeed.\ngot: %s", gamer, err)
 	}
 
-	req1 := "other player left the game"
-	req2 := "send on closed channel"
+	want1 := OtherGamerLeftError
+	want2 := ResourceNotAvailable
 	select {
 	case err, ok := <-ch:
 		ch = nil
-		if !ok || (ok && strings.Compare(err.Error(), req1) != 0 && strings.Compare(err.Error(), req2) != 0) {
-			t.Errorf("supposed result of WaitBegin: %q or %q, got: %v", req1, req2, err)
+		if !ok || (!errors.Is(err, want1) && !errors.Is(err, want2)) {
+			t.Errorf("WaitBegin:\nwant: %v\nor: %v\ngot: %v", want1, want2, err)
 		}
 	case <-time.After(2 * dur):
 		t.Fatalf("cancellation failed")
 	}
 }
 
-// TestGamerLeaveEnd tests: game.End after game leave 
+// TestGamerLeaveEnd tests: game.End after game leave
 // and closing of Game object as chanel.
 func TestGamerLeaveEnd(t *testing.T) {
 	gamer := &Gamer{Name: "Joe", Id: 1}
 
 	game := NewGame()
 	defer func() {
-		req := "send on closed channel"
-		if err := game.End(); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
-			t.Errorf("supposed result of End: %q , got: %v", req, err)
+		want := ResourceNotAvailable
+		if err := game.End(); !errors.Is(err, want) {
+			t.Errorf("End:\nwant: %v,\ngot: %v", want, err)
 		}
 	}()
 
 	// wait game should finish awaiting rapidly, when all players are joined
 	if err := game.Join(gamer); err != nil {
-		t.Fatalf("failed to join gamer %s to a game %v: %q", gamer, game, err)
+		t.Fatalf("failed to join gamer %s to a game %v: %v", gamer, game, err)
 	}
 	gamer.InGame = game
 	if err := game.Leave(gamer.Id); err != nil {
-		t.Fatalf("Leave for gamer %s should succeed. got: %s", gamer, err)
+		t.Fatalf("Leave for gamer %s should succeed.\ngot: %v", gamer, err)
 	}
 }
 
-// TestGamerLeaveBeginTurn tests game with all gamers on the board 
+// TestGamerLeaveBeginTurn tests game with all gamers on the board
 // should finish awaiting of turn with error
 // if Game object is closed as chanel.
 func TestGamerLeaveBeginTurn(t *testing.T) {
@@ -133,7 +132,7 @@ func TestGamerLeaveBeginTurn(t *testing.T) {
 
 	for _, g := range gamers {
 		if err := game.Join(g); err != nil {
-			t.Fatalf("failed to join gamer %s to a game %v: %q", g, game, err)
+			t.Fatalf("failed to join gamer %s to a game %v: %v", g, game, err)
 		}
 		g.InGame = game
 	}
@@ -159,7 +158,7 @@ func TestGamerLeaveBeginTurn(t *testing.T) {
 		}
 		if igt == true {
 			if err := game.Leave(g.Id); err != nil {
-				t.Fatalf("Leave for gamer %s should succeed. got: %s", g, err)
+				t.Fatalf("Leave for gamer %s should succeed.\ngot: %s", g, err)
 			}
 			break
 		}
@@ -188,16 +187,16 @@ func TestGamerLeaveBeginTurn(t *testing.T) {
 	}
 
 	if errs[0] != nil && errs[1] != nil {
-		t.Errorf("one of gamers should be assigned as \"his turn\", got: \"%v\" \"%v\"", errs[0], errs[1])
+		t.Errorf("one of gamers should be assigned as \"his turn\",\ngot: \"%v\",\n\"%v\"", errs[0], errs[1])
 	}
 
 	if errs[0] == nil && errs[1] == nil {
-		t.Errorf("one of gamers should be in awaiting condition and canceled by context, got: \"%v\" \"%v\"", errs[0], errs[1])
+		t.Errorf("one of gamers should be in awaiting condition and canceled by context,\ngot: \"%v\",\n\"%v\"", errs[0], errs[1])
 	}
 
 }
 
-// TestGamerLeaveGameOver tests game over error returning 
+// TestGamerLeaveGameOver tests game over error returning
 // by some functions after game is over.
 func TestGamerLeaveGameOver(t *testing.T) {
 	gamers := []*Gamer{
@@ -216,35 +215,35 @@ func TestGamerLeaveGameOver(t *testing.T) {
 	}
 
 	if err := game.Leave(gamers[0].Id); err != nil {
-		t.Errorf("Leave for gamer %s should succeed. got: %s", gamers[0], err)
+		t.Errorf("Leave for gamer %s should succeed.\ngot: %s", gamers[0], err)
 	}
 
 	looser := &Gamer{Name: "Looser", Id: 3}
-	req := "Game Over"
-	if err := game.Join(looser); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
-		t.Errorf("supposed result of Join: %q , got: %v", req, err)
+	want := GameOverError
+	if err := game.Join(looser); !errors.Is(err, want) {
+		t.Errorf("Join:\nwant: %v,\ngot: %v", want, err)
 	}
 
-	if _, err := game.IsGameBegun(gamers[1].Id); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
-		t.Errorf("supposed result of IsGameBegun: %q , got: %v", req, err)
+	if _, err := game.IsGameBegun(gamers[1].Id); !errors.Is(err, want) {
+		t.Errorf("IsGameBegun:\nwant: %v,\ngot: %v", want, err)
 	}
 
-	if _, err := game.IsMyTurn(gamers[1].Id); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
-		t.Errorf("supposed result of IsMyTurn: %q , got: %v", req, err)
+	if _, err := game.IsMyTurn(gamers[1].Id); !errors.Is(err, want) {
+		t.Errorf("IsMyTurn:\nwant: %v,\ngot: %v", want, err)
 	}
 
 	// user that is not disjoined yet - can access to the game data.
 	if _, err := game.GamerState(gamers[1].Id); err != nil {
-		t.Errorf("supposed result of GamerState: nil , got: %v", err)
+		t.Errorf("GamerState:\nwant: nil,\ngot: %v", err)
 	}
 
-	if err := game.MakeTurn(gamers[1].Id, &TurnData{X: 1, Y: 1}); err == nil || (err != nil && strings.Compare(err.Error(), req) != 0) {
-		t.Errorf("supposed result of IsMyTurn: %q , got: %v", req, err)
+	if err := game.MakeTurn(gamers[1].Id, &TurnData{X: 1, Y: 1}); !errors.Is(err, want) {
+		t.Errorf("IsMyTurn:\nwant: %v,\ngot: %v", want, err)
 	}
 
 }
 
-// TestGamerLeaveGameOver tests game over error returning 
+// TestGamerLeaveGameOver tests game over error returning
 // by some waiting functions after game is over.
 func TestGamerLeaveGameOverWaits(t *testing.T) {
 	gamers := []*Gamer{
@@ -263,7 +262,7 @@ func TestGamerLeaveGameOverWaits(t *testing.T) {
 	}
 
 	if err := game.Leave(gamers[0].Id); err != nil {
-		t.Errorf("Leave for gamer %s should succeed. got: %s", gamers[0], err)
+		t.Errorf("Leave for gamer %s should succeed.\ngot: %s", gamers[0], err)
 	}
 
 	// now we can perform any waiting, wich should rapidly return an error "Game Over"
@@ -273,15 +272,15 @@ func TestGamerLeaveGameOverWaits(t *testing.T) {
 	defer cancel()
 
 	//wait of game should fail
-	req := "Game Over"
+	want := GameOverError
 	ch := make(chan error)
 	go waitGameRoutine(ctx, game, gamers[1], ch)
 
 	select {
 	case err, ok := <-ch:
 		ch = nil
-		if !ok || (ok && strings.Compare(err.Error(), req) != 0) {
-			t.Errorf("supposed result of WaitBegin: %q , got: %v", req, err)
+		if !ok || !errors.Is(err, want) {
+			t.Errorf("supposed result of WaitBegin: %q , got: %v", want, err)
 		}
 	case <-time.After(2 * dur):
 		t.Fatalf("cancellation failed")
@@ -294,8 +293,8 @@ func TestGamerLeaveGameOverWaits(t *testing.T) {
 	select {
 	case err, ok := <-ch:
 		ch = nil
-		if !ok || (ok && strings.Compare(err.Error(), req) != 0) {
-			t.Errorf("supposed result of WaitBegin: %q , got: %v", req, err)
+		if !ok || !errors.Is(err, want) {
+			t.Errorf("supposed result of WaitBegin: %q , got: %v", want, err)
 		}
 	case <-time.After(2 * dur):
 		t.Fatalf("cancellation failed")

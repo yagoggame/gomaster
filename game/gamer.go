@@ -20,9 +20,9 @@ import "fmt"
 
 // Gamer - struct assigned to each gamer
 type Gamer struct {
-	Name   string//the name of a player. may be the same for different player
-	Id     int//unique id of a gamer
-	InGame Game//gamer in pool may be vacant (InPlay is nil) or joined to this game
+	Name   string //the name of a player. may be the same for different player
+	Id     int    //unique id of a gamer
+	InGame Game   //gamer in pool may be vacant (InPlay is nil) or joined to this game
 }
 
 // String provides compatibility with Stringer interface.
