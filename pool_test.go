@@ -189,7 +189,7 @@ func TestPoolGet(t *testing.T) {
 			gettedGamer, err := pool.GetGamer(tc.id)
 
 			switch tc.success {
-			case  true: 
+			case true:
 				if err != nil {
 					t.Errorf("GetGamer, err:\ngot: %v,\nwant: err=nil.", err)
 				}
