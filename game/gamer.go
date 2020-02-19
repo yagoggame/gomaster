@@ -21,11 +21,11 @@ import "fmt"
 // Gamer - struct assigned to each gamer
 type Gamer struct {
 	Name   string //the name of a player. may be the same for different player
-	Id     int    //unique id of a gamer
+	ID     int    //unique id of a gamer
 	InGame Game   //gamer in pool may be vacant (InPlay is nil) or joined to this game
 }
 
 // String provides compatibility with Stringer interface.
 func (g *Gamer) String() string {
-	return fmt.Sprintf("[ id: %d, name: %q, InGame: %v ]", g.Id, g.Name, g.InGame)
+	return fmt.Sprintf("[ id: %d, name: %q, InGame: %v ]", g.ID, g.Name, g.InGame)
 }

@@ -14,66 +14,51 @@
 // You should have received a copy of the GNU General Public License
 // along with yagogame.  If not, see <https://www.gnu.org/licenses/>.
 
-// gomaster - provides thread safe game entity and some data structures to maintain it
+// Package game provides thread safe game entity and some data structures to maintain it
 package game
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand"
-	"strings"
-	"time"
 )
 
-//errors
 var (
-	UnknownTypeReturnedError = errors.New("unknown type of value returned")
-	CancellationError        = errors.New("action cancelled")
-	NoPlaceError             = errors.New("no vacant place in the game")
-	GameOverError            = errors.New("the game is over")
-	UnknownIdError           = errors.New("gamer with inknown id")
-	NotYourTurnError         = errors.New("not a gamer's turn")
-	WrongTurnError           = errors.New("wrong turn")
-	OtherGamerLeftError      = errors.New("other gamer left the game")
-	GameDestroyedError       = errors.New("the game is destroyed")
-	ResourceNotAvailable     = errors.New("send on closed channel")
+	// ErrUnknownTypeReturned is an error of unknown type
+	// returned by concurrency safe operation with Game object
+	ErrUnknownTypeReturned = errors.New("unknown type of value returned")
+	// ErrCancellation is an error of cancelation by client
+	ErrCancellation = errors.New("action cancelled")
+	// ErrNoPlace is an error of joining to the game with no space left
+	ErrNoPlace = errors.New("no vacant place in the game")
+	// ErrGameOver is an error of operation with Game that is over
+	// (it is possible only to get some statuses)
+	ErrGameOver = errors.New("the game is over")
+	// ErrUnknownID is an error of operation with game by gamer with unregistred ID
+	ErrUnknownID = errors.New("gamer with inknown id")
+	// ErrNotYourTurn is an error of making a move while it is other gamer's turn
+	ErrNotYourTurn = errors.New("not a gamer's turn")
+	// ErrWrongTurn is an error of providing an error data for turn
+	ErrWrongTurn = errors.New("wrong turn")
+	// ErrOtherGamerLeft is an error of operation tha demand of other gamer
+	// when he is already left
+	ErrOtherGamerLeft = errors.New("other gamer left the game")
+	// ErrGameDestroyed is an error of performing any operation on Game object
+	// when it is closed as chanel
+	ErrGameDestroyed = errors.New("the game is destroyed")
+	// ErrResourceNotAvailable is an error of performing any whaing operation
+	// when the game is over
+	ErrResourceNotAvailable = errors.New("send on closed channel")
 )
 
-//////////////////////////////////////////////////////
-// Constants
-///////////////////////////////////////////////////////
-
-// ChipColour - provide datatype of chip's colours
+// ChipColour provides datatype of chip's colours
 type ChipColour int
 
-//Set of chip's colours
+// Set of chip's colours
 const (
 	NoColour ChipColour = 0
 	Black               = 1
 	White               = 2
-)
-
-/////////////////////////////////////////////////////
-// Actions
-///////////////////////////////////////////////////////
-
-// gameAction is a type with game action values
-type gameAction int
-
-// set of actions values of Game object
-const (
-	joinCMD        gameAction = iota //join This Game
-	endCMD                           //finish this game
-	gamerStateCMD                    //finish this game
-	makeTurnCMD                      //make a turn
-	isGameBegunCMD                   //request of state to avoid of wBeginCMD
-	isMyTurnCMD                      //request of state to avoid of wTurnCMD
-	leaveCMD                         //leave a game
-
-	//action, which can cause an awaiting
-	wBeginCMD //wait of game begin
-	wTurnCMD  //wait for your turn
 )
 
 // TurnData is a struct, using to put a gamer's turn data
@@ -81,23 +66,12 @@ type TurnData struct {
 	X, Y int
 }
 
-// gameCommand is a type to hold a comand to a Game
-type gameCommand struct {
-	act   gameAction
-	gamer *Gamer
-	id    int
-	rez   chan<- interface{}
-	turn  *TurnData
-}
-
 // Game is a datatype based on chanel, to provide a thread safe game entity.
 type Game chan *gameCommand
 
-///////////////////////////////////////////////////////
 // Queries on actions
-///////////////////////////////////////////////////////
 
-// End releases game resources and close a Game object as chanel
+// End releases game resources and closes a Game object as chanel.
 // Use this function only to abort, if creation failed.
 // Normaly - Leave invocation for all users has the same consequences.
 // If the End() invoked after this - an error will be returned.
@@ -127,8 +101,9 @@ func (g Game) Join(gamer *Gamer) (err error) {
 	return nil
 }
 
-// GamerState returns a copy of Internal State of a gamer (to prevent a manual changing).
-func (g Game) GamerState(id int) (state GamerState, err error) {
+// GamerState returns a copy of Internal State of a gamer
+// (to prevent a manual changing).
+func (g Game) GamerState(id int) (state *GamerState, err error) {
 	// gamer leaving can close the Game object as chanel,
 	// it could cause a panic in other goroutines. process it.
 	defer recoverAsErr(&err)
@@ -139,12 +114,12 @@ func (g Game) GamerState(id int) (state GamerState, err error) {
 
 	switch rez := rez.(type) {
 	case error:
-		return GamerState{}, rez
-	case GamerState:
+		return &GamerState{}, rez
+	case *GamerState:
 		return rez, nil
 	}
 
-	return GamerState{}, fmt.Errorf("returned value %v of Type %T: %w", rez, rez, UnknownTypeReturnedError)
+	return &GamerState{}, fmt.Errorf("returned value %v of Type %T: %w", rez, rez, ErrUnknownTypeReturned)
 
 }
 
@@ -165,7 +140,7 @@ func (g Game) WaitBegin(ctx context.Context, id int) (err error) {
 			return err
 		}
 	case <-ctx.Done():
-		return CancellationError
+		return ErrCancellation
 	}
 	return nil
 }
@@ -188,7 +163,7 @@ func (g Game) IsGameBegun(id int) (igb bool, err error) {
 		return rez, nil
 	}
 
-	return false, fmt.Errorf("returned value %v of Type %T: %w", rez, rez, UnknownTypeReturnedError)
+	return false, fmt.Errorf("returned value %v of Type %T: %w", rez, rez, ErrUnknownTypeReturned)
 }
 
 // WaitTurn waits for your turn.
@@ -206,7 +181,7 @@ func (g Game) WaitTurn(ctx context.Context, id int) (err error) {
 			return err
 		}
 	case <-ctx.Done():
-		return CancellationError
+		return ErrCancellation
 	}
 	return nil
 }
@@ -230,7 +205,7 @@ func (g Game) IsMyTurn(id int) (imt bool, err error) {
 		return rez, nil
 	}
 
-	return false, fmt.Errorf("returned value %v of Type %T: %w", rez, rez, UnknownTypeReturnedError)
+	return false, fmt.Errorf("returned value %v of Type %T: %w", rez, rez, ErrUnknownTypeReturned)
 }
 
 // MakeTurn tries to make a turn.
@@ -250,7 +225,8 @@ func (g Game) MakeTurn(id int, turn *TurnData) (err error) {
 }
 
 // Leave leave a game.
-// No methods of this Game object should be invoked by this gamer after this call - it will return an error.
+// No methods of this Game object should be invoked by this gamer
+// after this call - it will return an error.
 func (g Game) Leave(id int) (err error) {
 	// gamer leaving can close the Game object as chanel,
 	// it could cause a panic in other goroutines. process it.
@@ -266,289 +242,12 @@ func (g Game) Leave(id int) (err error) {
 	return nil
 }
 
-func recoverAsErr(err *error) {
-	if r := recover(); r != nil {
-		if errR, ok := r.(error); ok == true {
-			*err = errR
-			if strings.Compare((*err).Error(), "send on closed channel") != 0 {
-				panic(r)
-			}
-			*err = ResourceNotAvailable
-		}
-	}
-}
-
-///////////////////////////////////////////////////////
-// Process queries
-///////////////////////////////////////////////////////
-
-func joinThisGame(gamerStates *map[int]*GamerState, gamer *Gamer, rezChan chan<- interface{}, gameOver bool) {
-	defer close(rezChan)
-
-	//default colour
-	chipColour := ChipColour(rand.Intn(2) + 1)
-
-	if len(*gamerStates) > 1 {
-		rezChan <- NoPlaceError
-		return
-	}
-
-	// if game already collapsed by some reasone - there is no sense to wait.
-	if gameOver == true {
-		rezChan <- GameOverError
-		return
-	}
-
-	//recalc colour if nedded
-	for id := range *gamerStates {
-		chipColour = ChipColour(3 - int((*gamerStates)[id].Colour))
-	}
-
-	// assign a colour and give a chips to this player.
-	(*gamerStates)[gamer.Id] = &GamerState{
-		Colour: chipColour,
-		Name:   gamer.Name,
-	}
-}
-
-func gamerState(gamerStates map[int]*GamerState, id int, rezChan chan<- interface{}) {
-	defer close(rezChan)
-
-	// this action may be called only for joined players.
-	gs, ok := gamerStates[id]
-	if ok == false {
-		rezChan <- fmt.Errorf("failed to gamerState for gamer with id %d: %w", id, UnknownIdError)
-		return
-	}
-
-	//put chanel to report on estimation of game begin condition in safe place.
-	rezChan <- *gs
-}
-
-func waitBegin(gamerStates map[int]*GamerState, id int, rezChan chan<- interface{}, gameOver bool) {
-	// this action may be called only for joined players.
-	gs, ok := gamerStates[id]
-	if ok == false {
-		rezChan <- fmt.Errorf("failed to waitBegin for gamer with id %d: %w", id, UnknownIdError)
-		close(rezChan)
-		return
-	}
-
-	// if game already collapsed by some reasone - there is no sense to wait.
-	if gameOver == true {
-		rezChan <- GameOverError
-		close(rezChan)
-		return
-	}
-
-	//put chanel to report on estimation of game begin condition in safe place.
-	gs.beMSGChan = rezChan
-
-	//if number of players enough to begin a game - report to all players.
-	if len(gamerStates) == 2 {
-		for _, gs := range gamerStates {
-			reportOnChan(&gs.beMSGChan, nil)
-		}
-	}
-}
-
-func isGameBegun(gamerStates map[int]*GamerState, id int, currentTurn int, rezChan chan<- interface{}, gameOver bool) {
-	defer close(rezChan)
-
-	_, ok := gamerStates[id]
-	if ok == false {
-		rezChan <- fmt.Errorf("failed to isGameBegun for gamer with id %d: %w", id, UnknownIdError)
-		return
-	}
-
-	// if game already collapsed by some reasone - there is no sense to wait.
-	if gameOver == true {
-		rezChan <- GameOverError
-		return
-	}
-
-	// If a player's turn has already come - report
-	rezChan <- len(gamerStates) == 2
-}
-
-func waitTurn(gamerStates map[int]*GamerState, id int, currentTurn int, rezChan chan<- interface{}, gameOver bool) {
-	// this action may be called only for joined players.
-	gs, ok := gamerStates[id]
-	if ok == false {
-		rezChan <- fmt.Errorf("failed to waitTurn for gamer with id %d: %w", id, UnknownIdError)
-		close(rezChan)
-		return
-	}
-
-	// if game already collapsed by some reasone - there is no sense to wait.
-	if gameOver == true {
-		rezChan <- GameOverError
-		close(rezChan)
-		return
-	}
-
-	// If a player's turn has already come - report
-	if isMyTurnCalc(currentTurn, gs.Colour) {
-		close(rezChan)
-		return
-	}
-
-	//put chanel to report on estimation of player's turn begin condition in safe place.
-	gs.turnMSGChan = rezChan
-}
-
-func isMyTurnCalc(currentTurn int, col ChipColour) bool {
-	return (currentTurn%2 == 0 && col == Black) || (currentTurn%2 == 1 && col == White)
-}
-
-func isMyTurn(gamerStates map[int]*GamerState, id int, currentTurn int, rezChan chan<- interface{}, gameOver bool) {
-	defer close(rezChan)
-
-	gs, ok := gamerStates[id]
-	if ok == false {
-		rezChan <- fmt.Errorf("failed to isMyTurn for gamer with id %d: %w", id, UnknownIdError)
-		return
-	}
-
-	// if game already collapsed by some reasone - there is no sense to wait.
-	if gameOver == true {
-		rezChan <- GameOverError
-		return
-	}
-
-	// If a player's turn has already come - report.
-	rezChan <- isMyTurnCalc(currentTurn, gs.Colour)
-}
-
-func performTurn(turn *TurnData) error {
-	if turn.X <= 0 || turn.Y <= 0 {
-		return fmt.Errorf("coordinates must be positive. (%d %d) recieved", turn.X, turn.Y)
-	}
-	return nil
-}
-
-// makeTurn - try to make a turn. If success - return 1 and report, if some one is awaiting, that it's his turn, else return 0
-func makeTurn(gamerStates map[int]*GamerState, id int, turn *TurnData, currentTurn int, rezChan chan<- interface{}, gameOver bool) int {
-	defer close(rezChan)
-
-	// this action may be called only for joined players.
-	gs, ok := gamerStates[id]
-	if ok == false {
-		rezChan <- fmt.Errorf("failed to makeTurn for gamer with id %d: %w", id, UnknownIdError)
-		return 0
-	}
-
-	// if game already collapsed by some reasone - there is no sense to wait.
-	if gameOver == true {
-		rezChan <- GameOverError
-		return 0
-	}
-
-	// If it's not a player's turn
-	if !isMyTurnCalc(currentTurn, gs.Colour) {
-		rezChan <- fmt.Errorf("failed to makeTurn for gamer with id %d: %w", id, NotYourTurnError)
-		return 0
-	}
-
-	//perform turn and check, is it correct.
-	if err := performTurn(turn); err != nil {
-		rezChan <- fmt.Errorf("failed to makeTurn for gamer with id %d: %w: %s", id, WrongTurnError, err)
-		return 0
-	}
-
-	//report player that turn is changed, if they are awaiting.
-	for _, gs := range gamerStates {
-		if isMyTurnCalc(currentTurn+1, gs.Colour) {
-			// if there is old call's channel - report on it too.
-			reportOnChan(&gs.turnMSGChan, nil)
-		}
-	}
-
-	return 1
-}
-
-func leaveGame(gamerStates map[int]*GamerState, id int, rezChan chan<- interface{}) bool {
-	defer close(rezChan)
-
-	// this action may be called only for joined players.
-	_, ok := gamerStates[id]
-	if ok == false {
-		rezChan <- fmt.Errorf("failed to leaveGame for gamer with id %d: %w", id, UnknownIdError)
-		return false
-	}
-
-	// report to other player's, if they are awaiting somesthing, that other player left the game.
-	for _, gs := range gamerStates {
-		reportOnChan(&gs.beMSGChan, OtherGamerLeftError)
-		reportOnChan(&gs.turnMSGChan, OtherGamerLeftError)
-	}
-
-	delete(gamerStates, id)
-	return true
-}
-
-func reportOnChan(rezChan *chan<- interface{}, val interface{}) {
-	if *rezChan != nil {
-		if val != nil {
-			*rezChan <- val
-		}
-		close(*rezChan)
-		*rezChan = nil
-	}
-}
-
 // GamerState struct provides game internal data for one gamer.
 type GamerState struct {
-	Colour ChipColour // colour of chip of this gamer
-	Name   string     //this gamer's name
-	// delayed inform for WaitBegin's client
-	beMSGChan chan<- interface{}
-	// delayed inform for WaitTurn's client
-	turnMSGChan chan<- interface{}
-}
-
-// run processes commads for thread safe operations on Game.
-func (g Game) run() {
-	rand.Seed(time.Now().UnixNano())
-
-	gamerStates := make(map[int]*GamerState)
-	currentTurn := 0
-	gameOver := false
-
-	go func(g Game) {
-		for cmd := range g {
-			switch cmd.act {
-			case endCMD:
-				close(g)
-				close(cmd.rez)
-
-			case joinCMD:
-				joinThisGame(&gamerStates, cmd.gamer, cmd.rez, gameOver)
-			case gamerStateCMD:
-				gamerState(gamerStates, cmd.id, cmd.rez)
-			case wBeginCMD:
-				waitBegin(gamerStates, cmd.id, cmd.rez, gameOver)
-			case wTurnCMD:
-				waitTurn(gamerStates, cmd.id, currentTurn, cmd.rez, gameOver)
-			case isMyTurnCMD:
-				isMyTurn(gamerStates, cmd.id, currentTurn, cmd.rez, gameOver)
-			case isGameBegunCMD:
-				isGameBegun(gamerStates, cmd.id, currentTurn, cmd.rez, gameOver)
-			case makeTurnCMD:
-				currentTurn += makeTurn(gamerStates, cmd.id, cmd.turn, currentTurn, cmd.rez, gameOver)
-			case leaveCMD:
-				gameOver = leaveGame(gamerStates, cmd.id, cmd.rez)
-			}
-			if gameOver && len(gamerStates) == 0 {
-				close(g)
-			}
-		}
-		for _, gs := range gamerStates {
-			reportOnChan(&gs.beMSGChan, GameDestroyedError)
-			reportOnChan(&gs.turnMSGChan, GameDestroyedError)
-		}
-	}(g)
-	return
+	Colour      ChipColour         // colour of chip of this gamer
+	Name        string             //this gamer's name
+	beMSGChan   chan<- interface{} // delayed inform for WaitBegin's client
+	turnMSGChan chan<- interface{} // delayed inform for WaitTurn's client
 }
 
 // NewGame creates the Game.
