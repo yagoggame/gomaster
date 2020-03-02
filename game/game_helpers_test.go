@@ -125,7 +125,7 @@ func joinGamers(par *commonArgs) {
 		if err := par.game.Join(g); err != nil {
 			par.t.Fatalf("Unexpected Join err: %v", err)
 		}
-		g.InGame = par.game
+		g.SetGame(par.game)
 	}
 }
 
@@ -140,7 +140,7 @@ func joinGamersWait(par *commonArgs, fnc func(*waitGameRoutineParam)) (chans []c
 		if err := par.game.Join(g); err != nil {
 			par.t.Fatalf("Unexpected Join err: %v", err)
 		}
-		g.InGame = par.game
+		g.SetGame(par.game)
 
 		chans[i] = make(chan error)
 		arg := arg

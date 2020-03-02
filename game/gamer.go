@@ -18,14 +18,32 @@ package game
 
 import "fmt"
 
-// Gamer - struct assigned to each gamer
+// Gamer is a struct assigned to each gamer
 type Gamer struct {
 	Name   string //the name of a player. may be the same for different player
 	ID     int    //unique id of a gamer
-	InGame Game   //gamer in pool may be vacant (InPlay is nil) or joined to this game
+	inGame Game   //gamer in pool may be vacant (InPlay is nil) or joined to this game
+}
+
+// New produces the new gamer
+func New(name string, id int) *Gamer {
+	return &Gamer{
+		Name: name,
+		ID:   id,
+	}
 }
 
 // String provides compatibility with Stringer interface.
 func (g *Gamer) String() string {
-	return fmt.Sprintf("[ id: %d, name: %q, InGame: %v ]", g.ID, g.Name, g.InGame)
+	return fmt.Sprintf("[ id: %d, name: %q, InGame: %v ]", g.ID, g.Name, g.inGame)
+}
+
+// GetGame returns the game of this gamer
+func (g *Gamer) GetGame() Game {
+	return g.inGame
+}
+
+// SetGame sets the game of this gamer
+func (g *Gamer) SetGame(game Game) {
+	g.inGame = game
 }

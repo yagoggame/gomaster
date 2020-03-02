@@ -29,7 +29,7 @@ func checkReleaseCounter(t *testing.T, pool GamersPool, releaseCounter int) {
 	gamerInGameCount := 0
 	actualGamers := pool.ListGamers()
 	for _, g := range actualGamers {
-		if g.InGame != nil {
+		if g.GetGame() != nil {
 			gamerInGameCount++
 		}
 	}
@@ -83,8 +83,8 @@ func asyncReleaseState(pool GamersPool) (signal <-chan interface{}) {
 func checkInitialDisjoined(t *testing.T, pool GamersPool) {
 	actualGamers := pool.ListGamers()
 	for _, g := range actualGamers {
-		if g.InGame != nil {
-			t.Fatalf("Unexpected Gamer.InGame:\nwant:nil,\ngot:%v", g.InGame)
+		if g.GetGame() != nil {
+			t.Fatalf("Unexpected Gamer.GetGame():\nwant:nil,\ngot:%v", g.GetGame())
 		}
 	}
 }
@@ -95,7 +95,7 @@ func checkJoin(t *testing.T, pool GamersPool) {
 	countJoined := 0
 	actualGamers := pool.ListGamers()
 	for _, g := range actualGamers {
-		if g.InGame != nil {
+		if g.GetGame() != nil {
 			countJoined++
 		}
 	}
@@ -126,7 +126,7 @@ func checkGamesCount(t *testing.T, pool GamersPool) {
 	actualGamers := pool.ListGamers()
 
 	for _, g := range actualGamers {
-		games[g.InGame] = true
+		games[g.GetGame()] = true
 	}
 
 	if len(games) != int(math.Ceil(float64(len(validGamers))/2.0)) {

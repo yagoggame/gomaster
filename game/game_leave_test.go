@@ -93,7 +93,7 @@ func TestLeaveEnd(t *testing.T) {
 		gamers: gamers}
 	joinGamers(&arg)
 
-	gamers[0].InGame = game
+	gamers[0].SetGame(game)
 	if err := game.Leave(gamers[0].ID); err != nil {
 		t.Fatalf("Unexpectef Leave err: %v", err)
 	}

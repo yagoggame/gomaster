@@ -105,12 +105,12 @@ func joinOtherGame(gamers map[int]*game.Gamer, gamer *game.Gamer) error {
 			continue
 		}
 
-		if g.InGame != nil {
+		if g.GetGame() != nil {
 			//copy the gamer to prevent of chnging by the Game
 			gCpy := *gamer
 
-			if err := g.InGame.Join(&gCpy); err == nil {
-				gamer.InGame = g.InGame
+			if err := g.GetGame().Join(&gCpy); err == nil {
+				gamer.SetGame(g.GetGame())
 				return nil
 			}
 
@@ -124,11 +124,11 @@ func startOwnGame(gamer *game.Gamer) error {
 	//copy the gamer to prevent of chnging by the Game
 	gCpy := *gamer
 	if err := game.Join(&gCpy); err != nil {
-		gamer.InGame = nil
+		gamer.SetGame(nil)
 		game.End()
 		return fmt.Errorf("failed to join gamer with id %d to a game: %w: %s", gamer.ID, ErrGamerGameStart, err)
 	}
-	gamer.InGame = game
+	gamer.SetGame(game)
 	return nil
 }
 
@@ -143,7 +143,7 @@ func joinGame(gamers map[int]*game.Gamer, id int, rezChan chan<- interface{}) {
 		return
 	}
 
-	if gamer.InGame != nil {
+	if gamer.GetGame() != nil {
 		rezChan <- fmt.Errorf("failed to join gamer with id %d to a game: %w", id, ErrGamerOccupied)
 		return
 	}
@@ -167,9 +167,9 @@ func releaseGame(gamers map[int]*game.Gamer, id int, rezChan chan<- interface{})
 		return
 	}
 
-	if gamer.InGame != nil {
-		_ = gamer.InGame.Leave(gamer.ID)
-		gamer.InGame = nil
+	if gamer.GetGame() != nil {
+		_ = gamer.GetGame().Leave(gamer.ID)
+		gamer.SetGame(nil)
 	}
 }
 
