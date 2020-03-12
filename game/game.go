@@ -66,6 +66,24 @@ type TurnData struct {
 	X, Y int
 }
 
+// FieldState describes the game state on the field
+type FieldState struct {
+	GameOver           bool
+	ChipsInCup         map[ChipColour]int
+	ChipsCuptured      map[ChipColour]int
+	PointsUnderControl map[ChipColour][]*TurnData
+	Komi               float64
+	Scores             map[ChipColour]float64
+	ChipsOnBoard       map[ChipColour][]*TurnData
+}
+
+// Master interface wraps functions to work with game field and it's state
+type Master interface {
+	Move(colour ChipColour, td *TurnData) error
+	Size() int
+	State() *FieldState
+}
+
 // Game is a datatype based on chanel, to provide a thread safe game entity.
 type Game chan *gameCommand
 
