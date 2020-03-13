@@ -21,6 +21,9 @@ import (
 	"math/rand"
 	"strings"
 	"time"
+
+	"github.com/yagoggame/gomaster/game/field"
+	"github.com/yagoggame/gomaster/game/interfaces"
 )
 
 // gameAction is a type with game action values
@@ -47,7 +50,7 @@ type gameCommand struct {
 	gamer *Gamer
 	id    int
 	rez   chan<- interface{}
-	turn  *TurnData
+	turn  *interfaces.TurnData
 }
 
 // recoverAsErr processes the panic
@@ -84,9 +87,9 @@ func join(gamerStates *map[int]*GamerState, gamer *Gamer, rezChan chan<- interfa
 		return
 	}
 
-	chipColour := ChipColour(rand.Intn(2) + 1)
+	chipColour := interfaces.ChipColour(rand.Intn(2) + 1)
 	for id := range *gamerStates {
-		chipColour = ChipColour(3 - int((*gamerStates)[id].Colour))
+		chipColour = interfaces.ChipColour(3 - int((*gamerStates)[id].Colour))
 	}
 
 	(*gamerStates)[gamer.ID] = &GamerState{
@@ -182,7 +185,7 @@ func isMyTurn(gamerStates map[int]*GamerState, id int, currentTurn int, rezChan 
 // makeTurn implements concurrently safe processing of querry of
 // MakeTurn function
 // return 1 on success turn, else - 0
-func makeTurn(gamerStates map[int]*GamerState, id int, turn *TurnData, currentTurn int, rezChan chan<- interface{}, gameOver bool) int {
+func makeTurn(gamerStates map[int]*GamerState, id int, turn *interfaces.TurnData, currentTurn int, rezChan chan<- interface{}, gameOver bool) int {
 	defer close(rezChan)
 
 	gs, err := getGamerStateAndChecks(gamerStates, id, gameOver)
@@ -252,8 +255,8 @@ func getGamerStateAndChecks(gamerStates map[int]*GamerState, id int, gameOver bo
 	return gs, nil
 }
 
-func isMyTurnCalc(currentTurn int, col ChipColour) bool {
-	return (currentTurn%2 == 0 && col == Black) || (currentTurn%2 == 1 && col == White)
+func isMyTurnCalc(currentTurn int, col interfaces.ChipColour) bool {
+	return (currentTurn%2 == 0 && col == interfaces.Black) || (currentTurn%2 == 1 && col == interfaces.White)
 }
 
 func reportOnTurnChange(gamerStates map[int]*GamerState, currentTurn int) {
@@ -264,7 +267,7 @@ func reportOnTurnChange(gamerStates map[int]*GamerState, currentTurn int) {
 	}
 }
 
-func performTurn(turn *TurnData) error {
+func performTurn(turn *interfaces.TurnData) error {
 	if turn.X <= 0 || turn.Y <= 0 {
 		return fmt.Errorf("coordinates must be positive. (%d %d) recieved", turn.X, turn.Y)
 	}
@@ -272,7 +275,7 @@ func performTurn(turn *TurnData) error {
 }
 
 // run processes commads for thread safe operations on Game.
-func (g Game) run() {
+func (g Game) run(field *field.Field) {
 	rand.Seed(time.Now().UnixNano())
 
 	gamerStates := make(map[int]*GamerState)

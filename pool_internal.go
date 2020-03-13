@@ -42,6 +42,8 @@ const (
 // command is a type to hold a comand to a GamersPool.
 type command struct {
 	act   action
+	komi  float64
+	size  int
 	gamer *game.Gamer
 	id    int
 	rez   chan<- interface{}
@@ -119,9 +121,13 @@ func joinOtherGame(gamers map[int]*game.Gamer, gamer *game.Gamer) error {
 	return errNoVacantGamer
 }
 
-func startOwnGame(gamer *game.Gamer) error {
-	game := game.NewGame()
-	//copy the gamer to prevent of chnging by the Game
+func startOwnGame(gamer *game.Gamer, cmd *command) error {
+	game, err := game.NewGame(cmd.size, cmd.komi)
+	if err != nil {
+		return fmt.Errorf("failed to create game for gamer with id %d: %w: %s", gamer.ID, ErrGamerGameStart, err)
+	}
+
+	//copy the gamer to prevent of changing by the Game
 	gCpy := *gamer
 	if err := game.Join(&gCpy); err != nil {
 		gamer.SetGame(nil)
@@ -134,24 +140,24 @@ func startOwnGame(gamer *game.Gamer) error {
 
 // joinGame implements concurrently safe processing of querry of
 // JoinGame function
-func joinGame(gamers map[int]*game.Gamer, id int, rezChan chan<- interface{}) {
-	defer close(rezChan)
+func joinGame(gamers map[int]*game.Gamer, cmd *command) {
+	defer close(cmd.rez)
 
-	gamer, ok := gamers[id]
+	gamer, ok := gamers[cmd.id]
 	if ok == false {
-		rezChan <- fmt.Errorf("failed to join gamer with id %d to a game: %w", id, ErrIDNotFound)
+		cmd.rez <- fmt.Errorf("failed to join gamer with id %d to a game: %w", cmd.id, ErrIDNotFound)
 		return
 	}
 
 	if gamer.GetGame() != nil {
-		rezChan <- fmt.Errorf("failed to join gamer with id %d to a game: %w", id, ErrGamerOccupied)
+		cmd.rez <- fmt.Errorf("failed to join gamer with id %d to a game: %w", cmd.id, ErrGamerOccupied)
 		return
 	}
 
 	err := joinOtherGame(gamers, gamer)
 	if errors.Is(err, errNoVacantGamer) {
-		if err := startOwnGame(gamer); err != nil {
-			rezChan <- err
+		if err := startOwnGame(gamer, cmd); err != nil {
+			cmd.rez <- err
 		}
 	}
 }
@@ -190,7 +196,7 @@ func (gp GamersPool) run() {
 			case rem:
 				rmGamer(gamers, cmd.id, cmd.rez)
 			case joinG:
-				joinGame(gamers, cmd.id, cmd.rez)
+				joinGame(gamers, cmd)
 			case releaseG:
 				releaseGame(gamers, cmd.id, cmd.rez)
 			case getG:

@@ -43,7 +43,7 @@ func prepareGamers(t *testing.T, pool GamersPool) {
 		if err := pool.AddGamer(g); err != nil {
 			t.Fatalf("Unexpected fail on AddGamer: %q ", err)
 		}
-		if err := pool.JoinGame(g.ID); err != nil {
+		if err := pool.JoinGame(g.ID, usualSize, usualKomi); err != nil {
 			t.Fatalf("Unexpected fail on JoinGame: %q ", err)
 		}
 	}
@@ -109,7 +109,7 @@ func join(t *testing.T, pool GamersPool) int {
 	countRequestedJoins := 0
 	for _, test := range poolJoinTests {
 		t.Run(test.caseName, func(t *testing.T) {
-			err := pool.JoinGame(test.id)
+			err := pool.JoinGame(test.id, usualSize, usualKomi)
 			if !errors.Is(err, test.want) {
 				t.Errorf("Unexpected result for JoinGame on id %d:\nwant: %v\ngot: %v ", test.id, test.want, err)
 			}
