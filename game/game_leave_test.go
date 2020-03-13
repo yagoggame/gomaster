@@ -35,7 +35,10 @@ var leaveTests = []struct {
 
 // TestLeave tests the leaving of game procedure.
 func TestLeave(t *testing.T) {
-	game := NewGame()
+	game, err := NewGame(usualSize, usualKomi)
+	if err != nil {
+		t.Fatalf("Unexpected err on NewGame: err")
+	}
 	gamers := copyGamers(validGamers)
 
 	arg := commonArgs{
@@ -55,7 +58,10 @@ func TestLeave(t *testing.T) {
 // finishes awaiting rapidly on leave.
 func TestBeginLeave(t *testing.T) {
 	gamers := copyGamers(validGamers)[:1]
-	game := NewGame()
+	game, err := NewGame(usualSize, usualKomi)
+	if err != nil {
+		t.Fatalf("Unexpected err on NewGame: err")
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), rtDurationThreshold)
 	defer cancel()
 
@@ -78,7 +84,10 @@ func TestBeginLeave(t *testing.T) {
 // and closing of Game object as chanel.
 func TestLeaveEnd(t *testing.T) {
 	gamers := copyGamers(validGamers)[:1]
-	game := NewGame()
+	game, err := NewGame(usualSize, usualKomi)
+	if err != nil {
+		t.Fatalf("Unexpected err on NewGame: err")
+	}
 
 	defer func() {
 		want := ErrResourceNotAvailable
@@ -104,7 +113,10 @@ func TestLeaveEnd(t *testing.T) {
 // if Game object is closed as chanel.
 func TestLeaveBeginTurn(t *testing.T) {
 	gamers := copyGamers(validGamers)
-	game := NewGame()
+	game, err := NewGame(usualSize, usualKomi)
+	if err != nil {
+		t.Fatalf("Unexpected err on NewGame: err")
+	}
 	defer game.End()
 
 	ctx, cancel := context.WithTimeout(context.Background(), rtDurationThreshold)
@@ -129,7 +141,10 @@ func TestLeaveBeginTurn(t *testing.T) {
 // by some functions after game is over.
 func TestLeaveGameOver(t *testing.T) {
 	gamers := copyGamers(validGamers)
-	game := NewGame()
+	game, err := NewGame(usualSize, usualKomi)
+	if err != nil {
+		t.Fatalf("Unexpected err on NewGame: err")
+	}
 	defer game.End()
 
 	arg := commonArgs{
@@ -149,7 +164,10 @@ func TestLeaveGameOver(t *testing.T) {
 // by some waiting functions after game is over.
 func TestLeaveGameOverWaits(t *testing.T) {
 	gamers := copyGamers(validGamers)
-	game := NewGame()
+	game, err := NewGame(usualSize, usualKomi)
+	if err != nil {
+		t.Fatalf("Unexpected err on NewGame: err")
+	}
 	defer game.End()
 
 	arg := commonArgs{

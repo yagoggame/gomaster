@@ -21,6 +21,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
+	"github.com/yagoggame/gomaster/game/field"
+	"github.com/yagoggame/gomaster/game/interfaces"
 )
 
 var (
@@ -50,21 +53,6 @@ var (
 	// when the game is over
 	ErrResourceNotAvailable = errors.New("send on closed channel")
 )
-
-// ChipColour provides datatype of chip's colours
-type ChipColour int
-
-// Set of chip's colours
-const (
-	NoColour ChipColour = 0
-	Black               = 1
-	White               = 2
-)
-
-// TurnData is a struct, using to put a gamer's turn data
-type TurnData struct {
-	X, Y int
-}
 
 // Game is a datatype based on chanel, to provide a thread safe game entity.
 type Game chan *gameCommand
@@ -120,6 +108,48 @@ func (g Game) GamerState(id int) (state *GamerState, err error) {
 	}
 
 	return &GamerState{}, fmt.Errorf("returned value %v of Type %T: %w", rez, rez, ErrUnknownTypeReturned)
+
+}
+
+// FieldSize returns a size of game's field.
+func (g Game) FieldSize(id int) (size int, err error) {
+	// gamer leaving can close the Game object as chanel,
+	// it could cause a panic in other goroutines. process it.
+	defer recoverAsErr(&err)
+
+	c := make(chan interface{})
+	g <- &gameCommand{act: gameFieldSize, id: id, rez: c}
+	rez := <-c
+
+	switch rez := rez.(type) {
+	case error:
+		return 0, rez
+	case int:
+		return rez, nil
+	}
+
+	return 0, fmt.Errorf("returned value %v of Type %T: %w", rez, rez, ErrUnknownTypeReturned)
+
+}
+
+// GameState returns a structure with full description of game situation.
+func (g Game) GameState(id int) (state *interfaces.FieldState, err error) {
+	// gamer leaving can close the Game object as chanel,
+	// it could cause a panic in other goroutines. process it.
+	defer recoverAsErr(&err)
+
+	c := make(chan interface{})
+	g <- &gameCommand{act: gameStateCMD, id: id, rez: c}
+	rez := <-c
+
+	switch rez := rez.(type) {
+	case error:
+		return nil, rez
+	case *interfaces.FieldState:
+		return rez, nil
+	}
+
+	return nil, fmt.Errorf("returned value %v of Type %T: %w", rez, rez, ErrUnknownTypeReturned)
 
 }
 
@@ -209,7 +239,7 @@ func (g Game) IsMyTurn(id int) (imt bool, err error) {
 }
 
 // MakeTurn tries to make a turn.
-func (g Game) MakeTurn(id int, turn *TurnData) (err error) {
+func (g Game) MakeTurn(id int, turn *interfaces.TurnData) (err error) {
 	// gamer leaving can close the Game object as chanel,
 	// it could cause a panic in other goroutines. process it.
 	defer recoverAsErr(&err)
@@ -244,16 +274,20 @@ func (g Game) Leave(id int) (err error) {
 
 // GamerState struct provides game internal data for one gamer.
 type GamerState struct {
-	Colour      ChipColour         // colour of chip of this gamer
-	Name        string             //this gamer's name
-	beMSGChan   chan<- interface{} // delayed inform for WaitBegin's client
-	turnMSGChan chan<- interface{} // delayed inform for WaitTurn's client
+	Colour      interfaces.ChipColour // colour of chip of this gamer
+	Name        string                //this gamer's name
+	beMSGChan   chan<- interface{}    // delayed inform for WaitBegin's client
+	turnMSGChan chan<- interface{}    // delayed inform for WaitTurn's client
 }
 
 // NewGame creates the Game.
 // Game mast be finished  by calling of End() method.
-func NewGame() Game {
+func NewGame(size int, komi float64) (Game, error) {
+	field, err := field.New(size, komi)
+	if err != nil {
+		return nil, err
+	}
 	g := make(Game)
-	g.run()
-	return g
+	g.run(field)
+	return g, nil
 }

@@ -80,9 +80,10 @@ func (gp GamersPool) ListGamers() []*game.Gamer {
 }
 
 // JoinGame joins a gamer to some another gamer's game, or start it's own.
-func (gp GamersPool) JoinGame(id int) error {
+// with specified size and komi values
+func (gp GamersPool) JoinGame(id, size int, komi float64) error {
 	c := make(chan interface{})
-	gp <- &command{act: joinG, id: id, rez: c}
+	gp <- &command{act: joinG, id: id, rez: c, size: size, komi: komi}
 
 	if err := <-c; err != nil {
 		return err.(error)

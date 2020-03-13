@@ -27,6 +27,11 @@ import (
 
 var fastDurationThreshold = time.Duration(10) * time.Second
 
+const (
+	usualSize = 9
+	usualKomi = 0.0
+)
+
 var poolFillTests = []struct {
 	caseName string
 	gamer    *game.Gamer

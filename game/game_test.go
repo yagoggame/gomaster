@@ -21,11 +21,18 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"github.com/yagoggame/gomaster/game/interfaces"
 )
 
 var (
 	fastDurationThreshold = time.Duration(10) * time.Second
 	rtDurationThreshold   = time.Duration(100) * time.Millisecond
+)
+
+const (
+	usualSize = 9
+	usualKomi = 0.0
 )
 
 var validGamers = []*Gamer{
@@ -68,7 +75,10 @@ var IsGameBeginTests = []struct {
 
 // TestCreation tests NewGame
 func TestCreation(t *testing.T) {
-	game := NewGame()
+	game, err := NewGame(usualSize, usualKomi)
+	if err != nil {
+		t.Fatalf("Unexpected err on NewGame: err")
+	}
 	if game == nil {
 		t.Fatalf("Unexpected failure on NewGame: nil game created")
 	}
@@ -77,7 +87,10 @@ func TestCreation(t *testing.T) {
 
 // TestJoin tests joining of gamers to a game
 func TestJoin(t *testing.T) {
-	game := NewGame()
+	game, err := NewGame(usualSize, usualKomi)
+	if err != nil {
+		t.Fatalf("Unexpected err on NewGame: err")
+	}
 	defer game.End()
 
 	for _, test := range joinTests {
@@ -92,7 +105,10 @@ func TestJoin(t *testing.T) {
 
 // TestJoin tests joining of gamers to a game
 func TestEnd(t *testing.T) {
-	game := NewGame()
+	game, err := NewGame(usualSize, usualKomi)
+	if err != nil {
+		t.Fatalf("Unexpected err on NewGame: err")
+	}
 	defer game.End()
 
 	for _, gamer := range validGamers {
@@ -115,10 +131,13 @@ func TestEnd(t *testing.T) {
 	}
 }
 
-// TestGamerState tests GamerStatefunction.
-func TestGamerState(t *testing.T) {
+// TestFieldSize tests FieldSize function.
+func TestFieldSize(t *testing.T) {
 	gamers := copyGamers(validGamers)
-	game := NewGame()
+	game, err := NewGame(usualSize, usualKomi)
+	if err != nil {
+		t.Fatalf("Unexpected err on NewGame: err")
+	}
 	defer game.End()
 
 	arg := commonArgs{
@@ -127,14 +146,70 @@ func TestGamerState(t *testing.T) {
 		gamers: gamers}
 	joinGamers(&arg)
 
-	usedColours := make(map[ChipColour]bool)
+	for _, test := range funcErrTests {
+		t.Run(test.caseName, func(t *testing.T) {
+			size, err := game.FieldSize(test.gamer.ID)
+			if !errors.Is(err, test.want) {
+				t.Errorf("Unexpected GamerState err:\nwant: %v,\ngot: %v", test.want, err)
+			}
+			if err == nil && size != usualSize {
+				t.Errorf("Unexpected FieldSize:\n:want %d,got: %d.", usualSize, size)
+			}
+		})
+	}
+}
+
+// TestGameState tests GameState function.
+func TestGameState(t *testing.T) {
+	gamers := copyGamers(validGamers)
+	game, err := NewGame(usualSize, usualKomi)
+	if err != nil {
+		t.Fatalf("Unexpected err on NewGame: err")
+	}
+	defer game.End()
+
+	arg := commonArgs{
+		t:      t,
+		game:   game,
+		gamers: gamers}
+	joinGamers(&arg)
+
+	for _, test := range funcErrTests {
+		t.Run(test.caseName, func(t *testing.T) {
+			state, err := game.GameState(test.gamer.ID)
+			if !errors.Is(err, test.want) {
+				t.Errorf("Unexpected GamerState err:\nwant: %v,\ngot: %v", test.want, err)
+			}
+			if err == nil && state == nil {
+				t.Errorf("Unexpected GameState:\n:want !=nil,got: %v.", state)
+			}
+		})
+	}
+}
+
+// TestGamerState tests GamerStatefunction.
+func TestGamerState(t *testing.T) {
+	gamers := copyGamers(validGamers)
+	game, err := NewGame(usualSize, usualKomi)
+	if err != nil {
+		t.Fatalf("Unexpected err on NewGame: err")
+	}
+	defer game.End()
+
+	arg := commonArgs{
+		t:      t,
+		game:   game,
+		gamers: gamers}
+	joinGamers(&arg)
+
+	usedColours := make(map[interfaces.ChipColour]bool)
 	for _, test := range funcErrTests {
 		t.Run(test.caseName, func(t *testing.T) {
 			gs, err := game.GamerState(test.gamer.ID)
 			if !errors.Is(err, test.want) {
 				t.Errorf("Unexpected GamerState err:\nwant: %v,\ngot: %v", test.want, err)
 			}
-			if gs.Colour != NoColour {
+			if gs.Colour != interfaces.NoColour {
 				usedColours[gs.Colour] = true
 			}
 		})
@@ -147,7 +222,10 @@ func TestGamerState(t *testing.T) {
 
 // TestIsGameBegin verifies is IsGameBegin working fine.
 func TestIsGameBegin(t *testing.T) {
-	game := NewGame()
+	game, err := NewGame(usualSize, usualKomi)
+	if err != nil {
+		t.Fatalf("Unexpected err on NewGame: err")
+	}
 	defer game.End()
 
 	for _, test := range IsGameBeginTests {
@@ -170,7 +248,10 @@ func TestIsGameBegin(t *testing.T) {
 // TestGamerBeginSuccess tests game with all gamers on the board.
 // It should finish awaiting rapidly
 func TestGamerBeginSuccess(t *testing.T) {
-	game := NewGame()
+	game, err := NewGame(usualSize, usualKomi)
+	if err != nil {
+		t.Fatalf("Unexpected err on NewGame: err")
+	}
 	defer game.End()
 	ctx, cancel := context.WithTimeout(context.Background(), rtDurationThreshold)
 	defer cancel()
@@ -192,7 +273,10 @@ func TestGamerBeginSuccess(t *testing.T) {
 // It should hang untill second player join and return error on cancellation
 func TestGamerBeginFailure(t *testing.T) {
 	gamers := copyGamers(validGamers)[:1]
-	game := NewGame()
+	game, err := NewGame(usualSize, usualKomi)
+	if err != nil {
+		t.Fatalf("Unexpected err on NewGame: err")
+	}
 	defer game.End()
 	ctx, cancel := context.WithTimeout(context.Background(), rtDurationThreshold)
 	defer cancel()
@@ -216,7 +300,10 @@ func TestGamerBeginFailure(t *testing.T) {
 // fails rapidly on game begin awaiting
 func TestGamerBeginForeign(t *testing.T) {
 	gamers := copyGamers(validGamers)[:1]
-	game := NewGame()
+	game, err := NewGame(usualSize, usualKomi)
+	if err != nil {
+		t.Fatalf("Unexpected err on NewGame: err")
+	}
 	defer game.End()
 	ctx, cancel := context.WithTimeout(context.Background(), rtDurationThreshold)
 	defer cancel()
