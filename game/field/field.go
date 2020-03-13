@@ -34,6 +34,8 @@ var (
 	ErrOccupied = errors.New("the position is occupied")
 	// ErrNoChips error occurs when there are no chips left
 	ErrNoChips = errors.New("no chips left")
+	// ErrGameOver error occurs when attempt operation on game wich is over
+	ErrGameOver = errors.New("the game is over")
 )
 
 const (
@@ -162,9 +164,8 @@ func (field *Field) precheck(colour interfaces.ChipColour, td *interfaces.TurnDa
 	if td.X < 1 || td.Y < 1 || td.X > field.size || td.Y > field.size {
 		return fmt.Errorf("%w: got turn data: %v", ErrPosition, td)
 	}
-
-	if field.chipsNumber[colour] < 1 {
-		return fmt.Errorf("%w: colour: %v", ErrNoChips, colour)
+	if field.isGameOver() {
+		return fmt.Errorf("%w: colour: %v", ErrGameOver, colour)
 	}
 
 	return nil

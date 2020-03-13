@@ -184,7 +184,7 @@ func TestNoWhiteChips(t *testing.T) {
 	for x := 0; x < 19; x++ {
 		for y := 0; y < 19; y++ {
 			err := field.Move(colour, &interfaces.TurnData{X: x + 1, Y: y + 1})
-			if err != nil && !errors.Is(err, ErrNoChips) {
+			if err != nil && !errors.Is(err, ErrGameOver) {
 				t.Fatalf("Unexpected Move() err: %v", err)
 			}
 
@@ -217,7 +217,7 @@ func TestNoBlackChips(t *testing.T) {
 	for x := 0; x < 19; x++ {
 		for y := 0; y < 19; y++ {
 			err := field.Move(colour, &interfaces.TurnData{X: x + 1, Y: y + 1})
-			if err != nil && !errors.Is(err, ErrNoChips) {
+			if err != nil && !errors.Is(err, ErrGameOver) {
 				t.Fatalf("Unexpected Move() err: %v", err)
 			}
 
