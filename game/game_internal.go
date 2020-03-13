@@ -126,8 +126,21 @@ func fieldSize(gamerStates map[int]*GamerState, cmd *gameCommand, gd *gmaeDescri
 		return
 	}
 
-	//make a copy of gamer state to prevent change from the outside
 	cmd.rez <- gd.master.Size()
+}
+
+// gameState implements concurrently safe processing of querry of
+// FieldSize function
+func gameState(gamerStates map[int]*GamerState, cmd *gameCommand, gd *gmaeDescriptor) {
+	defer close(cmd.rez)
+
+	_, ok := gamerStates[cmd.id]
+	if ok == false {
+		cmd.rez <- fmt.Errorf("failed to fieldSize for gamer with id %d: %w", cmd.id, ErrUnknownID)
+		return
+	}
+
+	cmd.rez <- gd.master.State()
 }
 
 // waitBegin implements concurrently safe processing of querry of
@@ -309,6 +322,8 @@ func (g Game) run(master interfaces.Master) {
 				gamerState(gamerStates, cmd)
 			case gameFieldSize:
 				fieldSize(gamerStates, cmd, gd)
+			case gameStateCMD:
+				gameState(gamerStates, cmd, gd)
 			case wBeginCMD:
 				waitBegin(gamerStates, cmd, gd)
 			case wTurnCMD:

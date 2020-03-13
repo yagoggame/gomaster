@@ -131,7 +131,7 @@ func TestEnd(t *testing.T) {
 	}
 }
 
-// TestFieldSize tests FieldSizefunction.
+// TestFieldSize tests FieldSize function.
 func TestFieldSize(t *testing.T) {
 	gamers := copyGamers(validGamers)
 	game, err := NewGame(usualSize, usualKomi)
@@ -154,6 +154,34 @@ func TestFieldSize(t *testing.T) {
 			}
 			if err == nil && size != usualSize {
 				t.Errorf("Unexpected FieldSize:\n:want %d,got: %d.", usualSize, size)
+			}
+		})
+	}
+}
+
+// TestGameState tests GameState function.
+func TestGameState(t *testing.T) {
+	gamers := copyGamers(validGamers)
+	game, err := NewGame(usualSize, usualKomi)
+	if err != nil {
+		t.Fatalf("Unexpected err on NewGame: err")
+	}
+	defer game.End()
+
+	arg := commonArgs{
+		t:      t,
+		game:   game,
+		gamers: gamers}
+	joinGamers(&arg)
+
+	for _, test := range funcErrTests {
+		t.Run(test.caseName, func(t *testing.T) {
+			state, err := game.GameState(test.gamer.ID)
+			if !errors.Is(err, test.want) {
+				t.Errorf("Unexpected GamerState err:\nwant: %v,\ngot: %v", test.want, err)
+			}
+			if err == nil && state == nil {
+				t.Errorf("Unexpected GameState:\n:want !=nil,got: %v.", state)
 			}
 		})
 	}
