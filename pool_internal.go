@@ -101,13 +101,16 @@ func getGamer(gamers map[int]*game.Gamer, id int, rezChan chan<- interface{}) {
 	return
 }
 
-func joinOtherGame(gamers map[int]*game.Gamer, gamer *game.Gamer) error {
+func joinOtherGame(gamers map[int]*game.Gamer, gamer *game.Gamer, cmd *command) error {
 	for _, g := range gamers {
 		if gamer.ID == g.ID {
 			continue
 		}
 
-		if g.GetGame() != nil {
+		if game := g.GetGame(); game != nil {
+			if size, err := game.FieldSize(g.ID); err != nil || size != cmd.size {
+				return errNoVacantGamer
+			}
 			//copy the gamer to prevent of chnging by the Game
 			gCpy := *gamer
 
@@ -154,7 +157,7 @@ func joinGame(gamers map[int]*game.Gamer, cmd *command) {
 		return
 	}
 
-	err := joinOtherGame(gamers, gamer)
+	err := joinOtherGame(gamers, gamer, cmd)
 	if errors.Is(err, errNoVacantGamer) {
 		if err := startOwnGame(gamer, cmd); err != nil {
 			cmd.rez <- err

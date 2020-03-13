@@ -111,6 +111,27 @@ func (g Game) GamerState(id int) (state *GamerState, err error) {
 
 }
 
+// FieldSize returns a size of game's field.
+func (g Game) FieldSize(id int) (size int, err error) {
+	// gamer leaving can close the Game object as chanel,
+	// it could cause a panic in other goroutines. process it.
+	defer recoverAsErr(&err)
+
+	c := make(chan interface{})
+	g <- &gameCommand{act: gameFieldSize, id: id, rez: c}
+	rez := <-c
+
+	switch rez := rez.(type) {
+	case error:
+		return 0, rez
+	case int:
+		return rez, nil
+	}
+
+	return 0, fmt.Errorf("returned value %v of Type %T: %w", rez, rez, ErrUnknownTypeReturned)
+
+}
+
 // WaitBegin waits for game begin.
 // If gamer identified by id started this game
 // - awaiting another person.

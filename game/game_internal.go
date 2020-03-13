@@ -22,7 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yagoggame/gomaster/game/field"
 	"github.com/yagoggame/gomaster/game/interfaces"
 )
 
@@ -33,7 +32,9 @@ type gameAction int
 const (
 	joinCMD        gameAction = iota //join This Game
 	endCMD                           //finish this game
-	gamerStateCMD                    //finish this game
+	gamerStateCMD                    //request state of gamer
+	gameStateCMD                     //request state of game
+	gameFieldSize                    //request size of game field
 	makeTurnCMD                      //make a turn
 	isGameBegunCMD                   //request of state to avoid of wBeginCMD
 	isMyTurnCMD                      //request of state to avoid of wTurnCMD
@@ -74,16 +75,16 @@ func recoverAsErr(err *error) {
 
 // join implements concurrently safe processing of querry of
 // Join function
-func join(gamerStates *map[int]*GamerState, gamer *Gamer, rezChan chan<- interface{}, gameOver bool) {
-	defer close(rezChan)
+func join(gamerStates *map[int]*GamerState, cmd *gameCommand, gd *gmaeDescriptor) {
+	defer close(cmd.rez)
 
 	if len(*gamerStates) > 1 {
-		rezChan <- ErrNoPlace
+		cmd.rez <- ErrNoPlace
 		return
 	}
 
-	if gameOver == true {
-		rezChan <- ErrGameOver
+	if gd.gameOver == true {
+		cmd.rez <- ErrGameOver
 		return
 	}
 
@@ -92,40 +93,55 @@ func join(gamerStates *map[int]*GamerState, gamer *Gamer, rezChan chan<- interfa
 		chipColour = interfaces.ChipColour(3 - int((*gamerStates)[id].Colour))
 	}
 
-	(*gamerStates)[gamer.ID] = &GamerState{
+	(*gamerStates)[cmd.gamer.ID] = &GamerState{
 		Colour: chipColour,
-		Name:   gamer.Name,
+		Name:   cmd.gamer.Name,
 	}
 }
 
 // gamerState implements concurrently safe processing of querry of
 // GamerState function
-func gamerState(gamerStates map[int]*GamerState, id int, rezChan chan<- interface{}) {
-	defer close(rezChan)
+func gamerState(gamerStates map[int]*GamerState, cmd *gameCommand) {
+	defer close(cmd.rez)
 
-	gs, ok := gamerStates[id]
+	gs, ok := gamerStates[cmd.id]
 	if ok == false {
-		rezChan <- fmt.Errorf("failed to gamerState for gamer with id %d: %w", id, ErrUnknownID)
+		cmd.rez <- fmt.Errorf("failed to gamerState for gamer with id %d: %w", cmd.id, ErrUnknownID)
 		return
 	}
 
 	//make a copy of gamer state to prevent change from the outside
 	gsCpy := *gs
-	rezChan <- &gsCpy
+	cmd.rez <- &gsCpy
+}
+
+// fieldSize implements concurrently safe processing of querry of
+// FieldSize function
+func fieldSize(gamerStates map[int]*GamerState, cmd *gameCommand, gd *gmaeDescriptor) {
+	defer close(cmd.rez)
+
+	_, ok := gamerStates[cmd.id]
+	if ok == false {
+		cmd.rez <- fmt.Errorf("failed to fieldSize for gamer with id %d: %w", cmd.id, ErrUnknownID)
+		return
+	}
+
+	//make a copy of gamer state to prevent change from the outside
+	cmd.rez <- gd.master.Size()
 }
 
 // waitBegin implements concurrently safe processing of querry of
 // WaitBegin function
-func waitBegin(gamerStates map[int]*GamerState, id int, rezChan chan<- interface{}, gameOver bool) {
-	gs, err := getGamerStateAndChecks(gamerStates, id, gameOver)
+func waitBegin(gamerStates map[int]*GamerState, cmd *gameCommand, gd *gmaeDescriptor) {
+	gs, err := getGamerStateAndChecks(gamerStates, cmd.id, gd.gameOver)
 	if err != nil {
-		rezChan <- err
-		close(rezChan)
+		cmd.rez <- err
+		close(cmd.rez)
 		return
 	}
 
 	//put chanel to report on estimation of game begin condition in safe place.
-	gs.beMSGChan = rezChan
+	gs.beMSGChan = cmd.rez
 
 	//if number of players enough to begin a game - report to all players.
 	if len(gamerStates) == 2 {
@@ -137,86 +153,86 @@ func waitBegin(gamerStates map[int]*GamerState, id int, rezChan chan<- interface
 
 // isGameBegun implements concurrently safe processing of querry of
 // IsGameBegun function
-func isGameBegun(gamerStates map[int]*GamerState, id int, currentTurn int, rezChan chan<- interface{}, gameOver bool) {
-	defer close(rezChan)
+func isGameBegun(gamerStates map[int]*GamerState, cmd *gameCommand, gd *gmaeDescriptor) {
+	defer close(cmd.rez)
 
-	_, err := getGamerStateAndChecks(gamerStates, id, gameOver)
+	_, err := getGamerStateAndChecks(gamerStates, cmd.id, gd.gameOver)
 	if err != nil {
-		rezChan <- err
+		cmd.rez <- err
 		return
 	}
 
-	rezChan <- len(gamerStates) == 2
+	cmd.rez <- len(gamerStates) == 2
 }
 
 // waitTurn implements concurrently safe processing of querry of
 // WaitTurn function
-func waitTurn(gamerStates map[int]*GamerState, id int, currentTurn int, rezChan chan<- interface{}, gameOver bool) {
-	gs, err := getGamerStateAndChecks(gamerStates, id, gameOver)
+func waitTurn(gamerStates map[int]*GamerState, cmd *gameCommand, gd *gmaeDescriptor) {
+	gs, err := getGamerStateAndChecks(gamerStates, cmd.id, gd.gameOver)
 	if err != nil {
-		rezChan <- err
-		close(rezChan)
+		cmd.rez <- err
+		close(cmd.rez)
 		return
 	}
 
-	if isMyTurnCalc(currentTurn, gs.Colour) {
-		close(rezChan)
+	if isMyTurnCalc(gd.currentTurn, gs.Colour) {
+		close(cmd.rez)
 		return
 	}
 
 	//put chanel to report on estimation of player's turn begin condition in safe place.
-	gs.turnMSGChan = rezChan
+	gs.turnMSGChan = cmd.rez
 }
 
 // isMyTurn implements concurrently safe processing of querry of
 // IsMyTurn function
-func isMyTurn(gamerStates map[int]*GamerState, id int, currentTurn int, rezChan chan<- interface{}, gameOver bool) {
-	defer close(rezChan)
+func isMyTurn(gamerStates map[int]*GamerState, cmd *gameCommand, gd *gmaeDescriptor) {
+	defer close(cmd.rez)
 
-	gs, err := getGamerStateAndChecks(gamerStates, id, gameOver)
+	gs, err := getGamerStateAndChecks(gamerStates, cmd.id, gd.gameOver)
 	if err != nil {
-		rezChan <- err
+		cmd.rez <- err
 		return
 	}
 
-	rezChan <- isMyTurnCalc(currentTurn, gs.Colour)
+	cmd.rez <- isMyTurnCalc(gd.currentTurn, gs.Colour)
 }
 
 // makeTurn implements concurrently safe processing of querry of
 // MakeTurn function
 // return 1 on success turn, else - 0
-func makeTurn(gamerStates map[int]*GamerState, id int, turn *interfaces.TurnData, currentTurn int, rezChan chan<- interface{}, gameOver bool) int {
-	defer close(rezChan)
+func makeTurn(gamerStates map[int]*GamerState, cmd *gameCommand, gd *gmaeDescriptor) int {
+	defer close(cmd.rez)
 
-	gs, err := getGamerStateAndChecks(gamerStates, id, gameOver)
+	gs, err := getGamerStateAndChecks(gamerStates, cmd.id, gd.gameOver)
 	if err != nil {
-		rezChan <- err
+		cmd.rez <- err
 		return 0
 	}
-	if !isMyTurnCalc(currentTurn, gs.Colour) {
-		rezChan <- fmt.Errorf("failed to makeTurn for gamer with id %d: %w", id, ErrNotYourTurn)
-		return 0
-	}
-
-	if err := performTurn(turn); err != nil {
-		rezChan <- fmt.Errorf("failed to makeTurn for gamer with id %d: %w: %s", id, ErrWrongTurn, err)
+	if !isMyTurnCalc(gd.currentTurn, gs.Colour) {
+		cmd.rez <- fmt.Errorf("failed to makeTurn for gamer with id %d: %w", cmd.id, ErrNotYourTurn)
 		return 0
 	}
 
-	reportOnTurnChange(gamerStates, currentTurn)
+	if err := gd.master.Move(gs.Colour, cmd.turn); err != nil {
+		cmd.rez <- fmt.Errorf("failed to makeTurn for gamer with id %d: %w: %s", cmd.id, ErrWrongTurn, err)
+		return 0
+	}
+
+	reportOnTurnChange(gamerStates, gd.currentTurn)
 
 	return 1
 }
 
 // leaveGame implements concurrently safe processing of querry of
 // LeaveGame function
-func leaveGame(gamerStates map[int]*GamerState, id int, rezChan chan<- interface{}) bool {
-	defer close(rezChan)
+func leaveGame(gamerStates map[int]*GamerState, cmd *gameCommand) bool {
+	defer close(cmd.rez)
 
 	// this action may be called only for joined players.
-	_, ok := gamerStates[id]
+	_, ok := gamerStates[cmd.id]
 	if ok == false {
-		rezChan <- fmt.Errorf("failed to leaveGame for gamer with id %d: %w", id, ErrUnknownID)
+		cmd.rez <- fmt.Errorf("failed to leaveGame for gamer with id %d: %w", cmd.id, ErrUnknownID)
 		return false
 	}
 
@@ -226,20 +242,20 @@ func leaveGame(gamerStates map[int]*GamerState, id int, rezChan chan<- interface
 		reportOnChan(&gs.turnMSGChan, ErrOtherGamerLeft)
 	}
 
-	delete(gamerStates, id)
+	delete(gamerStates, cmd.id)
 	return true
 }
 
 //helpers
 
 // reportOnChan passes deferred data if needed
-func reportOnChan(rezChan *chan<- interface{}, val interface{}) {
-	if *rezChan != nil {
+func reportOnChan(ch *chan<- interface{}, val interface{}) {
+	if *ch != nil {
 		if val != nil {
-			*rezChan <- val
+			*ch <- val
 		}
-		close(*rezChan)
-		*rezChan = nil
+		close(*ch)
+		*ch = nil
 	}
 }
 
@@ -267,20 +283,18 @@ func reportOnTurnChange(gamerStates map[int]*GamerState, currentTurn int) {
 	}
 }
 
-func performTurn(turn *interfaces.TurnData) error {
-	if turn.X <= 0 || turn.Y <= 0 {
-		return fmt.Errorf("coordinates must be positive. (%d %d) recieved", turn.X, turn.Y)
-	}
-	return nil
+type gmaeDescriptor struct {
+	gameOver    bool
+	currentTurn int
+	master      interfaces.Master
 }
 
 // run processes commads for thread safe operations on Game.
-func (g Game) run(field *field.Field) {
+func (g Game) run(master interfaces.Master) {
 	rand.Seed(time.Now().UnixNano())
 
 	gamerStates := make(map[int]*GamerState)
-	currentTurn := 0
-	gameOver := false
+	gd := &gmaeDescriptor{master: master}
 
 	go func(g Game) {
 		for cmd := range g {
@@ -290,23 +304,25 @@ func (g Game) run(field *field.Field) {
 				close(cmd.rez)
 
 			case joinCMD:
-				join(&gamerStates, cmd.gamer, cmd.rez, gameOver)
+				join(&gamerStates, cmd, gd)
 			case gamerStateCMD:
-				gamerState(gamerStates, cmd.id, cmd.rez)
+				gamerState(gamerStates, cmd)
+			case gameFieldSize:
+				fieldSize(gamerStates, cmd, gd)
 			case wBeginCMD:
-				waitBegin(gamerStates, cmd.id, cmd.rez, gameOver)
+				waitBegin(gamerStates, cmd, gd)
 			case wTurnCMD:
-				waitTurn(gamerStates, cmd.id, currentTurn, cmd.rez, gameOver)
+				waitTurn(gamerStates, cmd, gd)
 			case isMyTurnCMD:
-				isMyTurn(gamerStates, cmd.id, currentTurn, cmd.rez, gameOver)
+				isMyTurn(gamerStates, cmd, gd)
 			case isGameBegunCMD:
-				isGameBegun(gamerStates, cmd.id, currentTurn, cmd.rez, gameOver)
+				isGameBegun(gamerStates, cmd, gd)
 			case makeTurnCMD:
-				currentTurn += makeTurn(gamerStates, cmd.id, cmd.turn, currentTurn, cmd.rez, gameOver)
+				gd.currentTurn += makeTurn(gamerStates, cmd, gd)
 			case leaveCMD:
-				gameOver = leaveGame(gamerStates, cmd.id, cmd.rez)
+				gd.gameOver = leaveGame(gamerStates, cmd)
 			}
-			if gameOver && len(gamerStates) == 0 {
+			if gd.gameOver && len(gamerStates) == 0 {
 				close(g)
 			}
 		}
