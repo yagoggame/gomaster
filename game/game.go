@@ -23,7 +23,7 @@ import (
 	"fmt"
 
 	"github.com/yagoggame/gomaster/game/field"
-	"github.com/yagoggame/gomaster/game/igogame"
+	"github.com/yagoggame/gomaster/game/igame"
 )
 
 var (
@@ -133,7 +133,7 @@ func (g Game) FieldSize(id int) (size int, err error) {
 }
 
 // GameState returns a structure with full description of game situation.
-func (g Game) GameState(id int) (state *igogame.FieldState, err error) {
+func (g Game) GameState(id int) (state *igame.FieldState, err error) {
 	// gamer leaving can close the Game object as chanel,
 	// it could cause a panic in other goroutines. process it.
 	defer recoverAsErr(&err)
@@ -145,7 +145,7 @@ func (g Game) GameState(id int) (state *igogame.FieldState, err error) {
 	switch rez := rez.(type) {
 	case error:
 		return nil, rez
-	case *igogame.FieldState:
+	case *igame.FieldState:
 		return rez, nil
 	}
 
@@ -239,7 +239,7 @@ func (g Game) IsMyTurn(id int) (imt bool, err error) {
 }
 
 // MakeTurn tries to make a turn.
-func (g Game) MakeTurn(id int, turn *igogame.TurnData) (err error) {
+func (g Game) MakeTurn(id int, turn *igame.TurnData) (err error) {
 	// gamer leaving can close the Game object as chanel,
 	// it could cause a panic in other goroutines. process it.
 	defer recoverAsErr(&err)
@@ -274,7 +274,7 @@ func (g Game) Leave(id int) (err error) {
 
 // GamerState struct provides game internal data for one gamer.
 type GamerState struct {
-	Colour      igogame.ChipColour // colour of chip of this gamer
+	Colour      igame.ChipColour   // colour of chip of this gamer
 	Name        string             //this gamer's name
 	beMSGChan   chan<- interface{} // delayed inform for WaitBegin's client
 	turnMSGChan chan<- interface{} // delayed inform for WaitTurn's client

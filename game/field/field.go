@@ -1,5 +1,5 @@
 // Copyright ©2020 BlinnikovAA. All rights reserved.
-// This file is part of yagoigogame.
+// This file is part of yagoigame.
 //
 // yagogame is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -12,7 +12,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with yagoigogame.  If not, see <https://www.gnu.org/licenses/>.
+// along with yagoigame.  If not, see <https://www.gnu.org/licenses/>.
 
 package field
 
@@ -20,7 +20,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/yagoggame/gomaster/game/igogame"
+	"github.com/yagoggame/gomaster/game/igame"
 )
 
 var (
@@ -47,10 +47,10 @@ const (
 
 // Field holds position of gamers on the game desk
 type Field struct {
-	field       []igogame.ChipColour
+	field       []igame.ChipColour
 	size        int
 	komi        float64
-	chipsNumber map[igogame.ChipColour]int
+	chipsNumber map[igame.ChipColour]int
 }
 
 // New generate Field with demensions of size x size
@@ -62,10 +62,10 @@ func New(size int, komi float64) (*Field, error) {
 	field := &Field{
 		size:  size,
 		komi:  komi,
-		field: make([]igogame.ChipColour, size*size),
-		chipsNumber: map[igogame.ChipColour]int{
-			igogame.Black: blackMax,
-			igogame.White: whiteMax,
+		field: make([]igame.ChipColour, size*size),
+		chipsNumber: map[igame.ChipColour]int{
+			igame.Black: blackMax,
+			igame.White: whiteMax,
 		},
 	}
 	return field, nil
@@ -77,7 +77,7 @@ func (field *Field) Size() int {
 }
 
 // Move performs move with attempt to put chip of colour to position td
-func (field *Field) Move(colour igogame.ChipColour, td *igogame.TurnData) error {
+func (field *Field) Move(colour igame.ChipColour, td *igame.TurnData) error {
 	if err := field.precheck(colour, td); err != nil {
 		return err
 	}
@@ -92,19 +92,19 @@ func (field *Field) Move(colour igogame.ChipColour, td *igogame.TurnData) error 
 }
 
 // State calculate full state description
-func (field *Field) State() *igogame.FieldState {
-	state := &igogame.FieldState{
-		ChipsInCup:         make(map[igogame.ChipColour]int, 2),
-		ChipsCuptured:      make(map[igogame.ChipColour]int, 2),
-		PointsUnderControl: make(map[igogame.ChipColour][]*igogame.TurnData, 2),
-		Scores:             make(map[igogame.ChipColour]float64, 2),
-		ChipsOnBoard:       make(map[igogame.ChipColour][]*igogame.TurnData, 2),
+func (field *Field) State() *igame.FieldState {
+	state := &igame.FieldState{
+		ChipsInCup:         make(map[igame.ChipColour]int, 2),
+		ChipsCuptured:      make(map[igame.ChipColour]int, 2),
+		PointsUnderControl: make(map[igame.ChipColour][]*igame.TurnData, 2),
+		Scores:             make(map[igame.ChipColour]float64, 2),
+		ChipsOnBoard:       make(map[igame.ChipColour][]*igame.TurnData, 2),
 	}
 
-	colours := []igogame.ChipColour{igogame.White, igogame.Black}
-	initialNumber := map[igogame.ChipColour]int{
-		igogame.White: whiteMax,
-		igogame.Black: blackMax,
+	colours := []igame.ChipColour{igame.White, igame.Black}
+	initialNumber := map[igame.ChipColour]int{
+		igame.White: whiteMax,
+		igame.Black: blackMax,
 	}
 
 	for _, colour := range colours {
@@ -114,14 +114,14 @@ func (field *Field) State() *igogame.FieldState {
 		state.PointsUnderControl[colour] = field.pointsUnderControl(colour)
 		state.Scores[colour] = float64(state.ChipsCuptured[colour] + len(state.PointsUnderControl[colour]))
 	}
-	state.Scores[igogame.White] = state.Scores[igogame.White] + state.Komi
+	state.Scores[igame.White] = state.Scores[igame.White] + state.Komi
 	state.GameOver = field.isGameOver()
 
 	return state
 }
 
 func (field *Field) isGameOver() bool {
-	colours := []igogame.ChipColour{igogame.White, igogame.Black}
+	colours := []igame.ChipColour{igame.White, igame.Black}
 	for _, colour := range colours {
 		if field.chipsNumber[colour] < 1 {
 			return true
@@ -131,18 +131,18 @@ func (field *Field) isGameOver() bool {
 	return false
 }
 
-func (field *Field) pointsUnderControl(colour igogame.ChipColour) []*igogame.TurnData {
-	positions := make([]*igogame.TurnData, 0)
+func (field *Field) pointsUnderControl(colour igame.ChipColour) []*igame.TurnData {
+	positions := make([]*igame.TurnData, 0)
 	// TODO: calculate points under colour control
 	return positions
 }
 
-func (field *Field) getChipsOnBoard(colour igogame.ChipColour) []*igogame.TurnData {
-	positions := make([]*igogame.TurnData, 0)
+func (field *Field) getChipsOnBoard(colour igame.ChipColour) []*igame.TurnData {
+	positions := make([]*igame.TurnData, 0)
 
 	for x := 0; x < field.Size(); x++ {
 		for y := 0; y < field.Size(); y++ {
-			td := &igogame.TurnData{X: x + 1, Y: y + 1}
+			td := &igame.TurnData{X: x + 1, Y: y + 1}
 			if field.field[field.indexFromXY(td)] == colour {
 				positions = append(positions, td)
 			}
@@ -152,12 +152,12 @@ func (field *Field) getChipsOnBoard(colour igogame.ChipColour) []*igogame.TurnDa
 	return positions
 }
 
-func (field *Field) indexFromXY(td *igogame.TurnData) int {
+func (field *Field) indexFromXY(td *igame.TurnData) int {
 	return td.X - 1 + (td.Y-1)*field.size
 }
 
-func (field *Field) precheck(colour igogame.ChipColour, td *igogame.TurnData) error {
-	if colour != igogame.Black && colour != igogame.White {
+func (field *Field) precheck(colour igame.ChipColour, td *igame.TurnData) error {
+	if colour != igame.Black && colour != igame.White {
 		return fmt.Errorf("%w: got colour: %v", ErrColour, colour)
 	}
 
@@ -172,7 +172,7 @@ func (field *Field) precheck(colour igogame.ChipColour, td *igogame.TurnData) er
 }
 
 func (field *Field) checkPosition(index int) error {
-	if field.field[index] != igogame.NoColour {
+	if field.field[index] != igame.NoColour {
 		return fmt.Errorf("%w: index: %d, field slice: %v", ErrOccupied, index, field.field)
 	}
 	return nil

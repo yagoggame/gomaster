@@ -21,7 +21,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/yagoggame/gomaster/game/igogame"
+	"github.com/yagoggame/gomaster/game/igame"
 )
 
 type isTurn struct {
@@ -146,12 +146,12 @@ func TestIsMyTurn(t *testing.T) {
 
 var MakeTurnTests = []struct {
 	caseName string
-	move     *igogame.TurnData
+	move     *igame.TurnData
 	want     error
 }{
-	{caseName: "wrong turn", move: &igogame.TurnData{X: 0, Y: 1}, want: ErrWrongTurn},
-	{caseName: "good turn", move: &igogame.TurnData{X: 1, Y: 1}, want: nil},
-	{caseName: "not your turn", move: &igogame.TurnData{X: 1, Y: 1}, want: ErrNotYourTurn},
+	{caseName: "wrong turn", move: &igame.TurnData{X: 0, Y: 1}, want: ErrWrongTurn},
+	{caseName: "good turn", move: &igame.TurnData{X: 1, Y: 1}, want: nil},
+	{caseName: "not your turn", move: &igame.TurnData{X: 1, Y: 1}, want: ErrNotYourTurn},
 }
 
 // TestMakeTurnFailures checks different errors during turn.
@@ -171,7 +171,7 @@ func TestMakeTurnFailures(t *testing.T) {
 
 	// both players are joined, so in same goroutine - no sence to await.
 	want := ErrUnknownID
-	if err := game.MakeTurn(invalidGamer.ID, &igogame.TurnData{X: 1, Y: 1}); !errors.Is(err, want) {
+	if err := game.MakeTurn(invalidGamer.ID, &igame.TurnData{X: 1, Y: 1}); !errors.Is(err, want) {
 		t.Errorf("Unexpected MakeTurn err:\nwant: %v,\ngot: %v", want, err)
 	}
 
