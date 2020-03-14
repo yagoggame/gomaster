@@ -47,7 +47,7 @@ const (
 
 // Field holds position of gamers on the game desk
 type Field struct {
-	field       []igame.ChipColour
+	field       [][]igame.ChipColour
 	size        int
 	komi        float64
 	chipsNumber map[igame.ChipColour]int
@@ -62,11 +62,14 @@ func New(size int, komi float64) (*Field, error) {
 	field := &Field{
 		size:  size,
 		komi:  komi,
-		field: make([]igame.ChipColour, size*size),
+		field: make([][]igame.ChipColour, size),
 		chipsNumber: map[igame.ChipColour]int{
 			igame.Black: blackMax,
 			igame.White: whiteMax,
 		},
+	}
+	for i := range field.field {
+		field.field[i] = make([]igame.ChipColour, size)
 	}
 	return field, nil
 }
@@ -81,13 +84,12 @@ func (field *Field) Move(colour igame.ChipColour, td *igame.TurnData) error {
 	if err := field.precheck(colour, td); err != nil {
 		return err
 	}
-	index := field.indexFromXY(td)
-	if err := field.checkPosition(index); err != nil {
+	if err := field.checkPosition(td); err != nil {
 		return err
 	}
 
 	field.chipsNumber[colour] = field.chipsNumber[colour] - 1
-	field.field[index] = colour
+	field.field[td.Y-1][td.X-1] = colour
 	return nil
 }
 
@@ -143,17 +145,13 @@ func (field *Field) getChipsOnBoard(colour igame.ChipColour) []*igame.TurnData {
 	for x := 0; x < field.Size(); x++ {
 		for y := 0; y < field.Size(); y++ {
 			td := &igame.TurnData{X: x + 1, Y: y + 1}
-			if field.field[field.indexFromXY(td)] == colour {
+			if field.field[td.Y-1][td.X-1] == colour {
 				positions = append(positions, td)
 			}
 		}
 	}
 
 	return positions
-}
-
-func (field *Field) indexFromXY(td *igame.TurnData) int {
-	return td.X - 1 + (td.Y-1)*field.size
 }
 
 func (field *Field) precheck(colour igame.ChipColour, td *igame.TurnData) error {
@@ -171,9 +169,9 @@ func (field *Field) precheck(colour igame.ChipColour, td *igame.TurnData) error 
 	return nil
 }
 
-func (field *Field) checkPosition(index int) error {
-	if field.field[index] != igame.NoColour {
-		return fmt.Errorf("%w: index: %d, field slice: %v", ErrOccupied, index, field.field)
+func (field *Field) checkPosition(td *igame.TurnData) error {
+	if field.field[td.Y-1][td.X-1] != igame.NoColour {
+		return fmt.Errorf("%w: at %d", ErrOccupied, td)
 	}
 	return nil
 }
