@@ -1,5 +1,5 @@
 // Copyright ©2020 BlinnikovAA. All rights reserved.
-// This file is part of yagoigame.
+// This file is part of yagogame.
 //
 // yagogame is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -12,7 +12,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with yagoigame.  If not, see <https://www.gnu.org/licenses/>.
+// along with yagogame.  If not, see <https://www.gnu.org/licenses/>.
 
 package field_test
 
