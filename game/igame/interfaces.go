@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with yagogame.  If not, see <https://www.gnu.org/licenses/>.
 
-package interfaces
+package igame
 
 // ChipColour provides datatype of chip's colours
 type ChipColour int
