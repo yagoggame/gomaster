@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yagoggame/gomaster/game/interfaces"
+	"github.com/yagoggame/gomaster/game/igogame"
 )
 
 var (
@@ -202,14 +202,14 @@ func TestGamerState(t *testing.T) {
 		gamers: gamers}
 	joinGamers(&arg)
 
-	usedColours := make(map[interfaces.ChipColour]bool)
+	usedColours := make(map[igogame.ChipColour]bool)
 	for _, test := range funcErrTests {
 		t.Run(test.caseName, func(t *testing.T) {
 			gs, err := game.GamerState(test.gamer.ID)
 			if !errors.Is(err, test.want) {
 				t.Errorf("Unexpected GamerState err:\nwant: %v,\ngot: %v", test.want, err)
 			}
-			if gs.Colour != interfaces.NoColour {
+			if gs.Colour != igogame.NoColour {
 				usedColours[gs.Colour] = true
 			}
 		})

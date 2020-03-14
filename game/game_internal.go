@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yagoggame/gomaster/game/interfaces"
+	"github.com/yagoggame/gomaster/game/igogame"
 )
 
 // gameAction is a type with game action values
@@ -51,7 +51,7 @@ type gameCommand struct {
 	gamer *Gamer
 	id    int
 	rez   chan<- interface{}
-	turn  *interfaces.TurnData
+	turn  *igogame.TurnData
 }
 
 // recoverAsErr processes the panic
@@ -88,9 +88,9 @@ func join(gamerStates *map[int]*GamerState, cmd *gameCommand, gd *gmaeDescriptor
 		return
 	}
 
-	chipColour := interfaces.ChipColour(rand.Intn(2) + 1)
+	chipColour := igogame.ChipColour(rand.Intn(2) + 1)
 	for id := range *gamerStates {
-		chipColour = interfaces.ChipColour(3 - int((*gamerStates)[id].Colour))
+		chipColour = igogame.ChipColour(3 - int((*gamerStates)[id].Colour))
 	}
 
 	(*gamerStates)[cmd.gamer.ID] = &GamerState{
@@ -284,8 +284,8 @@ func getGamerStateAndChecks(gamerStates map[int]*GamerState, id int, gameOver bo
 	return gs, nil
 }
 
-func isMyTurnCalc(currentTurn int, col interfaces.ChipColour) bool {
-	return (currentTurn%2 == 0 && col == interfaces.Black) || (currentTurn%2 == 1 && col == interfaces.White)
+func isMyTurnCalc(currentTurn int, col igogame.ChipColour) bool {
+	return (currentTurn%2 == 0 && col == igogame.Black) || (currentTurn%2 == 1 && col == igogame.White)
 }
 
 func reportOnTurnChange(gamerStates map[int]*GamerState, currentTurn int) {
@@ -299,11 +299,11 @@ func reportOnTurnChange(gamerStates map[int]*GamerState, currentTurn int) {
 type gmaeDescriptor struct {
 	gameOver    bool
 	currentTurn int
-	master      interfaces.Master
+	master      igogame.Master
 }
 
 // run processes commads for thread safe operations on Game.
-func (g Game) run(master interfaces.Master) {
+func (g Game) run(master igogame.Master) {
 	rand.Seed(time.Now().UnixNano())
 
 	gamerStates := make(map[int]*GamerState)

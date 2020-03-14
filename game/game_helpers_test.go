@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yagoggame/gomaster/game/interfaces"
+	"github.com/yagoggame/gomaster/game/igogame"
 )
 
 type waitGameRoutineParam struct {
@@ -119,7 +119,7 @@ func waitGameTurnMakeRoutine(p *waitGameRoutineParam) {
 		p.ch <- err
 		return
 	}
-	p.game.MakeTurn(p.gamer.ID, &interfaces.TurnData{X: 1, Y: 1})
+	p.game.MakeTurn(p.gamer.ID, &igogame.TurnData{X: 1, Y: 1})
 }
 
 func joinGamers(par *commonArgs) {
@@ -271,7 +271,7 @@ func testFunctionsGameover(par *commonArgs, extraGamer *Gamer) {
 		par.t.Errorf("unexpected Join err:\nwant: %v,\ngot: %v", want, err)
 	}
 
-	if err := par.game.MakeTurn(par.gamers[1].ID, &interfaces.TurnData{X: 1, Y: 1}); !errors.Is(err, want) {
+	if err := par.game.MakeTurn(par.gamers[1].ID, &igogame.TurnData{X: 1, Y: 1}); !errors.Is(err, want) {
 		par.t.Errorf("unexpected IsMyTurn err:\nwant: %v,\ngot: %v", want, err)
 	}
 
